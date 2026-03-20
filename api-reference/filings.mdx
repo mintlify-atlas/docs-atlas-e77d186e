@@ -184,7 +184,7 @@ The following example fetches the 10 most recent 10-K filings for AAPL using bot
 #include <stdio.h>
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
     if (!client) {
         fprintf(stderr, "Failed to initialize Axion client\n");
         return 1;
@@ -198,7 +198,7 @@ int main(void) {
         printf("AAPL 10-K filings (limit=10) [%d]:\n%s\n\n",
                filings->http_status, filings->data);
     }
-    axion_response_free(filings);
+    axion_free_response(filings);
 
     /* Fetch 10-K filings for AAPL filed in fiscal year 2023 */
     AxionResponse *forms = axion_filings_forms(
@@ -210,7 +210,7 @@ int main(void) {
         printf("AAPL 10-K (2023) [%d]:\n%s\n\n",
                forms->http_status, forms->data);
     }
-    axion_response_free(forms);
+    axion_free_response(forms);
 
     /* Cross-ticker search: all 10-K filings from Q4 2023 */
     AxionResponse *search = axion_filings_search(
@@ -222,7 +222,7 @@ int main(void) {
         printf("10-K filings Q4 2023 [%d]:\n%s\n\n",
                search->http_status, search->data);
     }
-    axion_response_free(search);
+    axion_free_response(search);
 
     /* List all supported form type descriptions */
     AxionResponse *desc = axion_filings_desc_forms(client);
@@ -232,9 +232,9 @@ int main(void) {
         printf("Supported form types [%d]:\n%s\n\n",
                desc->http_status, desc->data);
     }
-    axion_response_free(desc);
+    axion_free_response(desc);
 
-    axion_client_free(client);
+    axion_free_client(client);
     return 0;
 }
 ```

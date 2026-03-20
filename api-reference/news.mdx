@@ -103,7 +103,11 @@ The following example fetches the general market news feed, then fetches company
 #include <stdio.h>
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
 
     /* --- General market news --- */
     AxionResponse *general = axion_news_general(client);

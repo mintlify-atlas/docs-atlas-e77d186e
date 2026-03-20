@@ -135,7 +135,11 @@ The following example searches for GDP-related series, fetches the US GDP datase
 #include <stdio.h>
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
 
     /* --- Search for GDP series --- */
     AxionResponse *search = axion_econ_search(client, "GDP");

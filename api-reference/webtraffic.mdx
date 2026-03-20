@@ -65,7 +65,11 @@ The following example retrieves web traffic data for Amazon (AMZN) and prints th
 #include <stdio.h>
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
 
     AxionResponse *traffic = axion_webtraffic_traffic(client, "AMZN");
 

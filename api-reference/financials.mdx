@@ -384,7 +384,7 @@ The following example retrieves 8 periods of revenue and free cash flow for AAPL
 #include <stdio.h>
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
     if (!client) {
         fprintf(stderr, "Failed to initialize Axion client\n");
         return 1;
@@ -398,7 +398,7 @@ int main(void) {
         printf("Revenue (8 periods) [%d]:\n%s\n\n",
                revenue->http_status, revenue->data);
     }
-    axion_response_free(revenue);
+    axion_free_response(revenue);
 
     /* Fetch 8 periods of free cash flow */
     AxionResponse *fcf = axion_financials_free_cash_flow(client, "AAPL", 8);
@@ -408,7 +408,7 @@ int main(void) {
         printf("Free Cash Flow (8 periods) [%d]:\n%s\n\n",
                fcf->http_status, fcf->data);
     }
-    axion_response_free(fcf);
+    axion_free_response(fcf);
 
     /* Fetch aggregate financial snapshot */
     AxionResponse *snap = axion_financials_snapshot(client, "AAPL");
@@ -417,9 +417,9 @@ int main(void) {
     } else {
         printf("Snapshot [%d]:\n%s\n\n", snap->http_status, snap->data);
     }
-    axion_response_free(snap);
+    axion_free_response(snap);
 
-    axion_client_free(client);
+    axion_free_client(client);
     return 0;
 }
 ```

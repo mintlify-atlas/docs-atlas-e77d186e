@@ -141,7 +141,7 @@ typedef struct {
 ```
 
 <Note>
-  Always check `response->error` and `response->http_status` before accessing `response->json`. Free the response with `axion_response_free()` when done.
+  Always check `response->error` and `response->http_status` before accessing `response->json`. Free the response with `axion_free_response()` when done.
 </Note>
 
 ---
@@ -155,7 +155,7 @@ The following example fetches the profile, statistics, and analyst recommendatio
 #include <stdio.h>
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
     if (!client) {
         fprintf(stderr, "Failed to initialize Axion client\n");
         return 1;
@@ -168,7 +168,7 @@ int main(void) {
     } else {
         printf("Profile [%d]:\n%s\n\n", profile->http_status, profile->data);
     }
-    axion_response_free(profile);
+    axion_free_response(profile);
 
     /* Fetch key statistics */
     AxionResponse *stats = axion_profiles_statistics(client, "AAPL");
@@ -177,7 +177,7 @@ int main(void) {
     } else {
         printf("Statistics [%d]:\n%s\n\n", stats->http_status, stats->data);
     }
-    axion_response_free(stats);
+    axion_free_response(stats);
 
     /* Fetch analyst recommendation */
     AxionResponse *rec = axion_profiles_recommendation(client, "AAPL");
@@ -186,9 +186,9 @@ int main(void) {
     } else {
         printf("Recommendation [%d]:\n%s\n\n", rec->http_status, rec->data);
     }
-    axion_response_free(rec);
+    axion_free_response(rec);
 
-    axion_client_free(client);
+    axion_free_client(client);
     return 0;
 }
 ```

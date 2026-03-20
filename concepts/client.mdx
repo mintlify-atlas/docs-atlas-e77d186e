@@ -53,10 +53,10 @@ Always check the return value of `axion_init`. It returns `NULL` when libcurl in
 ## Freeing the client
 
 ```c
-void axion_free_client(AxionClient *client); /* also: axion_client() */
+void axion_free_client(AxionClient *client);
 ```
 
-When you are done, call `axion_free_client` (aliased as `axion_client()`). It:
+When you are done, call `axion_free_client`. It:
 
 1. Frees the copied API key string.
 2. Calls `curl_easy_cleanup` on the CURL handle.

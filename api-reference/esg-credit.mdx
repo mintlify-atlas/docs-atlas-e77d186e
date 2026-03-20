@@ -100,7 +100,11 @@ The following example fetches ESG scores for Apple, searches for Apple's credit 
 #include "cJSON.h"
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
 
     /* --- ESG data for AAPL --- */
     AxionResponse *esg = axion_esg_data(client, "AAPL");

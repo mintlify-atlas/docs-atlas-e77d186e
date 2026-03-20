@@ -102,10 +102,10 @@ cJSON_ArrayForEach(item, items) {
 ## Freeing a response
 
 ```c
-void axion_free_response(AxionResponse *response); /* also: axion_response() */
+void axion_free_response(AxionResponse *response);
 ```
 
-`axion_free_response` (aliased as `axion_response()`) releases all memory owned by the response:
+`axion_free_response` releases all memory owned by the response:
 
 1. Frees `data`
 2. Calls `cJSON_Delete(json)` to free the entire JSON tree

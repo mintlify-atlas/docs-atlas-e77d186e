@@ -143,7 +143,7 @@ The following example fetches earnings history, the current estimate trend, and 
 #include <stdio.h>
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
     if (!client) {
         fprintf(stderr, "Failed to initialize Axion client\n");
         return 1;
@@ -157,7 +157,7 @@ int main(void) {
         printf("Earnings History [%d]:\n%s\n\n",
                history->http_status, history->data);
     }
-    axion_response_free(history);
+    axion_free_response(history);
 
     /* Analyst estimate trend */
     AxionResponse *trend = axion_earnings_trend(client, "AAPL");
@@ -167,7 +167,7 @@ int main(void) {
         printf("Earnings Trend [%d]:\n%s\n\n",
                trend->http_status, trend->data);
     }
-    axion_response_free(trend);
+    axion_free_response(trend);
 
     /* Detailed report for Q1 fiscal 2024 */
     AxionResponse *report = axion_earnings_report(client, "AAPL", "2024", "Q1");
@@ -177,9 +177,9 @@ int main(void) {
         printf("Q1 2024 Report [%d]:\n%s\n\n",
                report->http_status, report->data);
     }
-    axion_response_free(report);
+    axion_free_response(report);
 
-    axion_client_free(client);
+    axion_free_client(client);
     return 0;
 }
 ```

@@ -176,7 +176,7 @@ The following example retrieves the full ownership picture for AAPL — the comb
 #include <stdio.h>
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
     if (!client) {
         fprintf(stderr, "Failed to initialize Axion client\n");
         return 1;
@@ -190,7 +190,7 @@ int main(void) {
         printf("Ownership Summary [%d]:\n%s\n\n",
                ownership->http_status, ownership->data);
     }
-    axion_response_free(ownership);
+    axion_free_response(ownership);
 
     /* Institutional (13F) holders */
     AxionResponse *institutions = axion_insiders_institutions(client, "AAPL");
@@ -200,7 +200,7 @@ int main(void) {
         printf("Institutional Holders [%d]:\n%s\n\n",
                institutions->http_status, institutions->data);
     }
-    axion_response_free(institutions);
+    axion_free_response(institutions);
 
     /* Recent insider activity summary */
     AxionResponse *activity = axion_insiders_activity(client, "AAPL");
@@ -210,7 +210,7 @@ int main(void) {
         printf("Insider Activity [%d]:\n%s\n\n",
                activity->http_status, activity->data);
     }
-    axion_response_free(activity);
+    axion_free_response(activity);
 
     /* Detailed individual transactions */
     AxionResponse *transactions = axion_insiders_transactions(client, "AAPL");
@@ -220,9 +220,9 @@ int main(void) {
         printf("Insider Transactions [%d]:\n%s\n\n",
                transactions->http_status, transactions->data);
     }
-    axion_response_free(transactions);
+    axion_free_response(transactions);
 
-    axion_client_free(client);
+    axion_free_client(client);
     return 0;
 }
 ```

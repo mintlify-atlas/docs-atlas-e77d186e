@@ -47,16 +47,13 @@ AxionClient *axion_init(const char *api_key);
 
 ---
 
-## axion_client / axion_free_client
+## axion_free_client
 
 Frees all resources held by the client: the API key string, the `CURL` handle, and the global libcurl state.
 
 ```c
-void axion_client(AxionClient *client);
-void axion_free_client(AxionClient *client); // alias
+void axion_free_client(AxionClient *client);
 ```
-
-`axion_free_client` is an alias for `axion_client`. Both functions are identical.
 
 <ParamField path="client" type="AxionClient *" required>
   Client previously returned by `axion_init`. Passing `NULL` is safe and has no effect.
@@ -68,16 +65,13 @@ void axion_free_client(AxionClient *client); // alias
 
 ---
 
-## axion_response / axion_free_response
+## axion_free_response
 
 Frees all resources held by a response: the raw data string, the parsed JSON object (`cJSON_Delete`), the error string, and the struct itself.
 
 ```c
-void axion_response(AxionResponse *response);
-void axion_free_response(AxionResponse *response); // alias
+void axion_free_response(AxionResponse *response);
 ```
-
-`axion_free_response` is an alias for `axion_response`. Both functions are identical.
 
 <ParamField path="response" type="AxionResponse *" required>
   Response previously returned by any Axion API function. Passing `NULL` is safe and has no effect.

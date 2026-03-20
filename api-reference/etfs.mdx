@@ -108,7 +108,11 @@ static void print_result(const char *label, AxionResponse *resp) {
 }
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
     const char *ticker = "SPY";
 
     print_result("Fund metadata", axion_etfs_fund(client, ticker));

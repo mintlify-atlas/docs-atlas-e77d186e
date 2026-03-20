@@ -109,7 +109,11 @@ static void print_relationship(
 }
 
 int main(void) {
-    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    AxionClient *client = axion_init("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
     const char *ticker = "AAPL";
 
     print_relationship("Customers",

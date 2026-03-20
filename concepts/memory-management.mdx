@@ -8,7 +8,7 @@ The Axion C SDK allocates memory on your behalf for clients and responses. You a
 ## Freeing the client
 
 ```c
-void axion_free_client(AxionClient *client); /* also: axion_client() */
+void axion_free_client(AxionClient *client);
 ```
 
 Every `AxionClient` created by `axion_init` must be freed with `axion_free_client`. The function:
@@ -27,7 +27,7 @@ axion_free_client(client); /* required */
 ## Freeing responses
 
 ```c
-void axion_free_response(AxionResponse *response); /* also: axion_response() */
+void axion_free_response(AxionResponse *response);
 ```
 
 Every `AxionResponse*` returned by an SDK call must be freed with `axion_free_response`. The function:
