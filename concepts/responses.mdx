@@ -1,0 +1,125 @@
+---
+title: "Responses"
+description: "Understanding the AxionResponse struct and how to work with response data."
+---
+
+Every API call returns a pointer to an `AxionResponse`. This struct contains the HTTP status code, the raw response body, a parsed JSON object, and any error message.
+
+## The AxionResponse struct
+
+```c
+typedef struct {
+    int          http_status; /* HTTP status code (e.g. 200, 404) */
+    char        *data;        /* Raw JSON response string          */
+    struct cJSON *json;       /* Parsed JSON object                */
+    char        *error;       /* Error message, or NULL on success */
+} AxionResponse;
+```
+
+### Field reference
+
+| Field | Type | Description |
+|---|---|---|
+| `http_status` | `int` | The HTTP status code returned by the server. `0` when a network error prevented a response from being received. |
+| `data` | `char *` | The raw response body as a null-terminated string. `NULL` when a network-level error occurred before any data was received. |
+| `json` | `struct cJSON *` | The response body parsed into a cJSON object tree. Populated only on successful responses (2xx). |
+| `error` | `char *` | A human-readable error message. Set on both HTTP errors (4xx/5xx) and network failures. `NULL` on success. |
+
+## When fields are populated
+
+**Successful request (2xx)**
+- `http_status` — set to the 2xx code (e.g. `200`)
+- `data` — set to the raw JSON string
+- `json` — set to the parsed cJSON tree
+- `error` — `NULL`
+
+**HTTP error (4xx or 5xx)**
+- `http_status` — set to the error code (e.g. `401`, `500`)
+- `data` — set to the raw error body
+- `json` — `NULL`
+- `error` — set to the `message` field extracted from the JSON error body
+
+**Network / cURL failure**
+- `http_status` — `0`
+- `data` — `NULL`
+- `json` — `NULL`
+- `error` — set to the string returned by `curl_easy_strerror`
+
+<Note>
+Always check `response->error` before accessing `response->json`. See [Error handling](/concepts/error-handling) for the recommended pattern.
+</Note>
+
+## Working with the JSON object
+
+The `json` field is a standard `cJSON` tree. You can use any cJSON function on it.
+
+### Printing the full response
+
+```c
+#include "cJSON.h"
+
+char *text = cJSON_Print(response->json);
+if (text != NULL) {
+    printf("%s\n", text);
+    free(text); /* cJSON_Print allocates — you must free the result */
+}
+```
+
+<Warning>
+`cJSON_Print` returns a heap-allocated string. You are responsible for calling `free()` on it. Do not pass it to `axion_free_response` — that function only manages memory owned by `AxionResponse`.
+</Warning>
+
+### Reading individual fields
+
+```c
+cJSON *root = response->json;
+
+cJSON *id_item = cJSON_GetObjectItemCaseSensitive(root, "id");
+if (cJSON_IsString(id_item) && id_item->valuestring != NULL) {
+    printf("ID: %s\n", id_item->valuestring);
+}
+
+cJSON *count_item = cJSON_GetObjectItemCaseSensitive(root, "count");
+if (cJSON_IsNumber(count_item)) {
+    printf("Count: %d\n", count_item->valueint);
+}
+```
+
+### Iterating over an array
+
+```c
+cJSON *items = cJSON_GetObjectItemCaseSensitive(response->json, "items");
+cJSON *item = NULL;
+
+cJSON_ArrayForEach(item, items) {
+    cJSON *name = cJSON_GetObjectItemCaseSensitive(item, "name");
+    if (cJSON_IsString(name)) {
+        printf("- %s\n", name->valuestring);
+    }
+}
+```
+
+## Freeing a response
+
+```c
+void axion_free_response(AxionResponse *response); /* also: axion_response() */
+```
+
+`axion_free_response` (aliased as `axion_response()`) releases all memory owned by the response:
+
+1. Frees `data`
+2. Calls `cJSON_Delete(json)` to free the entire JSON tree
+3. Frees `error`
+4. Frees the `AxionResponse` struct itself
+
+```c
+AxionResponse *response = axion_some_call(client, ...);
+
+/* ... use response ... */
+
+axion_free_response(response); /* always call this */
+```
+
+<Warning>
+Do not free `response->data`, `response->json`, or `response->error` directly. Use `axion_free_response` to release the whole struct. Double-freeing any of these fields is undefined behavior.
+</Warning>

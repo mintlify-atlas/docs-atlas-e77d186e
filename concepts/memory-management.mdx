@@ -1,0 +1,170 @@
+---
+title: "Memory management"
+description: "Rules for correctly freeing SDK objects and avoiding memory leaks."
+---
+
+The Axion C SDK allocates memory on your behalf for clients and responses. You are responsible for freeing that memory using the SDK's cleanup functions. This page describes every allocation you need to track.
+
+## Freeing the client
+
+```c
+void axion_free_client(AxionClient *client); /* also: axion_client() */
+```
+
+Every `AxionClient` created by `axion_init` must be freed with `axion_free_client`. The function:
+
+- Frees the `api_key` string (allocated with `strdup` inside `axion_init`)
+- Calls `curl_easy_cleanup` on the CURL handle
+- Frees the `AxionClient` struct
+- Calls `curl_global_cleanup` to shut down libcurl
+
+```c
+AxionClient *client = axion_init(api_key);
+/* ... */
+axion_free_client(client); /* required */
+```
+
+## Freeing responses
+
+```c
+void axion_free_response(AxionResponse *response); /* also: axion_response() */
+```
+
+Every `AxionResponse*` returned by an SDK call must be freed with `axion_free_response`. The function:
+
+- Frees `response->data` (the raw JSON string)
+- Calls `cJSON_Delete(response->json)` to free the entire parsed JSON tree
+- Frees `response->error`
+- Frees the `AxionResponse` struct itself
+
+```c
+AxionResponse *response = axion_some_call(client, ...);
+/* ... use response ... */
+axion_free_response(response); /* required */
+```
+
+<Warning>
+Do not call `free()` directly on `response->data`, `response->json`, or `response->error`. These fields are freed internally by `axion_free_response`. Freeing them yourself causes a double-free, which is undefined behavior and may corrupt the heap.
+</Warning>
+
+## Strings from cJSON_Print
+
+`cJSON_Print` returns a heap-allocated, null-terminated string. This string is **not** managed by `AxionResponse` — you must free it yourself with `free()`.
+
+```c
+char *text = cJSON_Print(response->json);
+if (text != NULL) {
+    printf("%s\n", text);
+    free(text); /* your responsibility */
+}
+```
+
+<Note>
+`cJSON_PrintUnformatted` follows the same rule: the caller owns the returned string and must free it.
+</Note>
+
+## Complete cleanup pattern
+
+The following example shows the correct order of operations for a program that makes a single API call:
+
+```c
+#include "axion.h"
+#include "cJSON.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(void) {
+    AxionClient *client = axion_init(getenv("AXION_API_KEY"));
+    if (client == NULL) {
+        fprintf(stderr, "Failed to create client\n");
+        return EXIT_FAILURE;
+    }
+
+    AxionResponse *response = axion_some_call(client, "arg");
+    if (response == NULL) {
+        axion_free_client(client);
+        return EXIT_FAILURE;
+    }
+
+    if (response->error != NULL) {
+        fprintf(stderr, "Error: %s\n", response->error);
+        axion_free_response(response); /* free before returning */
+        axion_free_client(client);
+        return EXIT_FAILURE;
+    }
+
+    char *text = cJSON_Print(response->json);
+    if (text != NULL) {
+        printf("%s\n", text);
+        free(text); /* free the cJSON_Print result */
+    }
+
+    axion_free_response(response); /* free the response */
+    axion_free_client(client);     /* free the client last */
+    return EXIT_SUCCESS;
+}
+```
+
+## Common mistakes
+
+### Forgetting to free the response
+
+```c
+/* Wrong: response is never freed */
+void make_call(AxionClient *client) {
+    AxionResponse *response = axion_some_call(client, "arg");
+    printf("Status: %d\n", response->http_status);
+    /* leak: axion_free_response never called */
+}
+```
+
+```c
+/* Correct */
+void make_call(AxionClient *client) {
+    AxionResponse *response = axion_some_call(client, "arg");
+    printf("Status: %d\n", response->http_status);
+    axion_free_response(response);
+}
+```
+
+### Freeing fields directly
+
+```c
+/* Wrong: do not free individual fields */
+free(response->data);         /* undefined behavior */
+cJSON_Delete(response->json); /* undefined behavior — axion_free_response does this */
+free(response);               /* incomplete cleanup */
+```
+
+```c
+/* Correct: use the SDK function */
+axion_free_response(response);
+```
+
+### Not freeing cJSON_Print output
+
+```c
+/* Wrong: text is never freed */
+char *text = cJSON_Print(response->json);
+printf("%s\n", text);
+axion_free_response(response); /* does NOT free text */
+```
+
+```c
+/* Correct */
+char *text = cJSON_Print(response->json);
+printf("%s\n", text);
+free(text);                    /* free before or after freeing the response */
+axion_free_response(response);
+```
+
+## Summary
+
+| Object | How to free |
+|---|---|
+| `AxionClient *` | `axion_free_client(client)` |
+| `AxionResponse *` | `axion_free_response(response)` |
+| String from `cJSON_Print` | `free(text)` |
+| `response->data` | Do not free directly — use `axion_free_response` |
+| `response->json` | Do not free directly — use `axion_free_response` |
+| `response->error` | Do not free directly — use `axion_free_response` |

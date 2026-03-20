@@ -1,80 +1,143 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Make your first Axion API request in C in under five minutes."
 ---
 
-## Get started in three steps
+This guide walks you through obtaining an API key, writing a minimal C program that fetches stock price data, and compiling and running it.
 
-Get your documentation site running locally and make your first customization.
+## Before you begin
 
-### Step 1: Set up your local environment
+Make sure you have [installed the Axion C SDK](/installation) and can compile against it.
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+<Steps>
+  <Step title="Get an API key">
+    Log in to the [Axion dashboard](https://axionquant.com/dashboard/api-keys) and create a new API key. Copy the key — you will pass it to `axion_init()` at runtime.
 
-### Step 2: Deploy your changes
+    <Warning>
+      Keep your API key out of source control. Use an environment variable or a secrets manager rather than hardcoding the value in your source.
+    </Warning>
+  </Step>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+  <Step title="Write the program">
+    Create a file named `main.c` with the following content:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```c main.c
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <axion.h>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    int main(void) {
+        const char *api_key = getenv("AXION_API_KEY");
+        if (!api_key) {
+            fprintf(stderr, "Error: AXION_API_KEY environment variable not set\n");
+            return 1;
+        }
 
-### Step 3: Go live
+        /* Initialize the client with your API key */
+        AxionClient *client = axion_init(api_key);
+        if (!client) {
+            fprintf(stderr, "Error: failed to initialize Axion client\n");
+            return 1;
+        }
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+        /* Fetch stock price data for AAPL */
+        AxionResponse *response = axion_stocks_prices(client, "AAPL", "2024-01-01", "2024-12-31", "1d");
+        if (!response) {
+            fprintf(stderr, "Error: no response returned\n");
+            axion_free_client(client);
+            return 1;
+        }
 
-## Next steps
+        if (response->error) {
+            fprintf(stderr, "API error: %s\n", response->error);
+        } else {
+            printf("HTTP status : %d\n", response->http_status);
+            printf("Response    : %s\n", response->data);
+        }
 
-Now that you have your docs running, explore these key features:
+        /* Always free the response and client when done */
+        axion_free_response(response);
+        axion_free_client(client);
 
-<CardGroup cols={2}>
+        return 0;
+    }
+    ```
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+    The program uses three core SDK functions:
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+    | Function | Purpose |
+    |---|---|
+    | `axion_init(api_key)` | Allocates and configures an `AxionClient` |
+    | `axion_stocks_prices(client, ticker, from, to, frame)` | Fetches historical price data for a stock ticker |
+    | `axion_free_response(response)` | Releases memory owned by the `AxionResponse` |
+    | `axion_free_client(client)` | Tears down the client and releases its resources |
+  </Step>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+  <Step title="Compile the program">
+    <CodeGroup>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+    ```bash Static linking
+    gcc -Ipath/to/axion-c-sdk/include \
+        -o main main.c \
+        path/to/axion-c-sdk/libaxion.a \
+        -lcurl
+    ```
 
+    ```bash Dynamic linking (system-wide install)
+    gcc -o main main.c -laxion -lcurl
+    ```
+
+    </CodeGroup>
+  </Step>
+
+  <Step title="Run the program">
+    Export your API key and run the binary:
+
+    ```bash
+    export AXION_API_KEY="your_api_key_here"
+    ./main
+    ```
+
+    A successful response looks like:
+
+    ```
+    HTTP status : 200
+    Response    : {"symbol":"AAPL","price":189.42,"currency":"USD","timestamp":1742400000}
+    ```
+
+    <Tip>
+      The raw JSON string is available in `response->data`. If the response was parsed successfully, `response->json` holds a `cJSON *` pointer you can traverse with the cJSON API.
+    </Tip>
+  </Step>
+</Steps>
+
+## Error handling
+
+Always check both `response` itself and `response->error` before accessing `response->data` or `response->json`:
+
+```c
+if (!response) {
+    /* Network-level failure or allocation error */
+}
+if (response->error) {
+    /* API returned an error; message is in response->error */
+}
+/* Safe to use response->data and response->json here */
+```
+
+## Memory ownership
+
+- `axion_init()` allocates the client — always pair it with `axion_free_client()`.
+- Every `AxionResponse *` returned by the SDK is heap-allocated — always pair it with `axion_free_response()`.
+- Do not access `response->data`, `response->json`, or `response->error` after calling `axion_free_response()`.
+
+## What's next
+
+<CardGroup>
+  <Card title="API reference" icon="book" href="/api-reference/client">
+    Browse all available functions, parameters, and response schemas.
+  </Card>
+  <Card title="Core concepts" icon="key" href="/concepts/client">
+    Learn about the client lifecycle, responses, and memory management.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

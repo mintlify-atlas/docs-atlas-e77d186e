@@ -1,0 +1,185 @@
+---
+title: "Market Data"
+description: "Fetch tickers, metadata, and historical prices for stocks, crypto, forex, futures, and indices."
+---
+
+The Axion C SDK provides market data functions for five asset classes: stocks, crypto, forex, futures, and indices. Each class follows the same three-function pattern — list tickers, fetch a single ticker's metadata, and retrieve historical prices.
+
+## Asset classes
+
+| Asset class | Prefix | Notes |
+|---|---|---|
+| Stocks | `axion_stocks_` | Filter by country and exchange |
+| Crypto | `axion_crypto_` | Filter by type (e.g. `"spot"`) |
+| Forex | `axion_forex_` | Filter by country and exchange |
+| Futures | `axion_futures_` | Filter by exchange |
+| Indices | `axion_indices_` | Filter by exchange |
+
+## Listing tickers
+
+Each asset class exposes a tickers function that returns all available symbols. Optional filter parameters can be passed as `NULL` to skip filtering.
+
+<Tabs>
+  <Tab title="Stocks">
+    ```c
+    // All US stocks on NYSE
+    AxionResponse *resp = axion_stocks_tickers(client, "US", "NYSE");
+
+    // All stocks (no filter)
+    AxionResponse *resp = axion_stocks_tickers(client, NULL, NULL);
+    ```
+  </Tab>
+  <Tab title="Crypto">
+    ```c
+    // Spot crypto only
+    AxionResponse *resp = axion_crypto_tickers(client, "spot");
+
+    // All crypto (no filter)
+    AxionResponse *resp = axion_crypto_tickers(client, NULL);
+    ```
+  </Tab>
+  <Tab title="Forex">
+    ```c
+    // All USD forex pairs
+    AxionResponse *resp = axion_forex_tickers(client, "US", NULL);
+    ```
+  </Tab>
+  <Tab title="Futures">
+    ```c
+    AxionResponse *resp = axion_futures_tickers(client, "CME");
+    ```
+  </Tab>
+  <Tab title="Indices">
+    ```c
+    AxionResponse *resp = axion_indices_tickers(client, "SP");
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  All parameters except `client` and `ticker` can be `NULL`. Passing `NULL` omits that filter and returns broader results.
+</Note>
+
+## Fetching single ticker metadata
+
+To retrieve metadata for a specific symbol, use the singular ticker function:
+
+```c
+AxionResponse *stock  = axion_stocks_ticker(client, "AAPL");
+AxionResponse *crypto = axion_crypto_ticker(client, "BTC-USD");
+AxionResponse *forex  = axion_forex_ticker(client, "EURUSD");
+AxionResponse *future = axion_futures_ticker(client, "ES1!");
+AxionResponse *index  = axion_indices_ticker(client, "SPX");
+```
+
+## Historical prices
+
+The prices functions accept a ticker, an optional date range, and an optional time frame. All three optional parameters can be `NULL`.
+
+```c
+AxionResponse *axion_stocks_prices(
+    AxionClient *client,
+    const char  *ticker,
+    const char  *from_date,  // "YYYY-MM-DD" or NULL
+    const char  *to_date,    // "YYYY-MM-DD" or NULL
+    const char  *frame       // "1d", "1h", "5m", etc., or NULL
+);
+```
+
+The same signature applies to `axion_crypto_prices`, `axion_forex_prices`, `axion_futures_prices`, and `axion_indices_prices`.
+
+### Time frame values
+
+| Frame | Description |
+|---|---|
+| `"1d"` | Daily bars (default when `NULL`) |
+| `"1h"` | Hourly bars |
+| `"5m"` | 5-minute bars |
+| `"1m"` | 1-minute bars |
+
+<Tip>
+  Pass `NULL` for `frame` to use the default resolution for the requested date range.
+</Tip>
+
+## Examples
+
+### AAPL daily prices for 2024
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to create client\n");
+        return 1;
+    }
+
+    AxionResponse *resp = axion_stocks_prices(
+        client,
+        "AAPL",
+        "2024-01-01",
+        "2024-12-31",
+        "1d"
+    );
+
+    if (resp->error) {
+        fprintf(stderr, "Error: %s\n", resp->error);
+    } else {
+        printf("HTTP %d\n", resp->http_status);
+        printf("%s\n", resp->data);
+    }
+
+    axion_response(resp);
+    axion_client(client);
+    return 0;
+}
+```
+
+### BTC crypto prices
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to create client\n");
+        return 1;
+    }
+
+    // Hourly BTC prices for a specific week
+    AxionResponse *resp = axion_crypto_prices(
+        client,
+        "BTC-USD",
+        "2024-03-01",
+        "2024-03-07",
+        "1h"
+    );
+
+    if (resp->error) {
+        fprintf(stderr, "Error: %s\n", resp->error);
+    } else {
+        printf("%s\n", resp->data);
+    }
+
+    axion_response(resp);
+    axion_client(client);
+    return 0;
+}
+```
+
+## Memory management
+
+Always free both the response and the client when you are done:
+
+```c
+axion_response(resp);   // free AxionResponse
+axion_client(client);   // free AxionClient
+```
+
+<Warning>
+  Failing to call `axion_response` and `axion_client` will leak memory. Both must be called even when the response contains an error.
+</Warning>

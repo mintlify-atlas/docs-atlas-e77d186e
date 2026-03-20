@@ -1,0 +1,147 @@
+---
+title: "Stocks"
+description: "List stock tickers, retrieve ticker details, and fetch historical price data."
+---
+
+## axion_stocks_tickers
+
+Returns a list of stock tickers, optionally filtered by country and exchange.
+
+```c
+AxionResponse *axion_stocks_tickers(
+    AxionClient *client,
+    const char  *country,
+    const char  *exchange
+);
+```
+
+**Endpoint:** `GET /stocks/tickers`
+
+<ParamField path="client" type="AxionClient *" required>
+  Initialized client returned by `axion_init`.
+</ParamField>
+
+<ParamField path="country" type="const char *">
+  ISO 3166-1 alpha-2 country code to filter by (e.g. `"US"`, `"GB"`). Pass `NULL` to return tickers from all countries.
+</ParamField>
+
+<ParamField path="exchange" type="const char *">
+  Exchange identifier to filter by (e.g. `"NASDAQ"`, `"NYSE"`). Pass `NULL` to return tickers from all exchanges.
+</ParamField>
+
+The `json` field of the response contains an array of ticker objects. Each object includes fields such as the ticker symbol, company name, exchange, and country.
+
+---
+
+## axion_stocks_ticker
+
+Returns profile and metadata for a single stock ticker.
+
+```c
+AxionResponse *axion_stocks_ticker(
+    AxionClient *client,
+    const char  *ticker
+);
+```
+
+**Endpoint:** `GET /stocks/<ticker>`
+
+<ParamField path="client" type="AxionClient *" required>
+  Initialized client returned by `axion_init`.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  Stock ticker symbol (e.g. `"AAPL"`, `"TSLA"`). Case-insensitive on the server.
+</ParamField>
+
+The `json` field of the response contains an object with ticker metadata including the symbol, company name, sector, market cap, and exchange.
+
+---
+
+## axion_stocks_prices
+
+Returns OHLCV price bars for a stock ticker over a specified date range and time frame.
+
+```c
+AxionResponse *axion_stocks_prices(
+    AxionClient *client,
+    const char  *ticker,
+    const char  *from_date,
+    const char  *to_date,
+    const char  *frame
+);
+```
+
+**Endpoint:** `GET /stocks/<ticker>/prices`
+
+<ParamField path="client" type="AxionClient *" required>
+  Initialized client returned by `axion_init`.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  Stock ticker symbol (e.g. `"AAPL"`).
+</ParamField>
+
+<ParamField path="from_date" type="const char *">
+  Start date in `YYYY-MM-DD` format (e.g. `"2024-01-01"`). Pass `NULL` to use the server default.
+</ParamField>
+
+<ParamField path="to_date" type="const char *">
+  End date in `YYYY-MM-DD` format (e.g. `"2024-12-31"`). Pass `NULL` to use the server default.
+</ParamField>
+
+<ParamField path="frame" type="const char *">
+  Time frame for each bar. Accepted values: `"1d"` (daily), `"1h"` (hourly), `"5m"` (5-minute). Pass `NULL` to use the server default.
+</ParamField>
+
+The `json` field of the response contains an array of price bar objects. Each bar includes fields for the timestamp, open, high, low, close, and volume.
+
+<Tip>
+  For large date ranges, use `"1d"` to reduce response size. Switch to `"1h"` or `"5m"` only for shorter ranges.
+</Tip>
+
+---
+
+## Example
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_init("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize client\n");
+        return 1;
+    }
+
+    /* List US tickers on NASDAQ */
+    AxionResponse *tickers = axion_stocks_tickers(client, "US", "NASDAQ");
+    if (tickers->http_status == 200 && tickers->json) {
+        /* Process tickers->json array */
+        printf("Tickers: %s\n", tickers->data);
+    } else {
+        fprintf(stderr, "Error: %s\n", tickers->error ? tickers->error : "unknown");
+    }
+    axion_free_response(tickers);
+
+    /* Get Apple ticker details */
+    AxionResponse *ticker = axion_stocks_ticker(client, "AAPL");
+    if (ticker->http_status == 200 && ticker->json) {
+        printf("Ticker: %s\n", ticker->data);
+    }
+    axion_free_response(ticker);
+
+    /* Fetch daily prices for Apple in 2024 */
+    AxionResponse *prices = axion_stocks_prices(
+        client, "AAPL", "2024-01-01", "2024-12-31", "1d"
+    );
+    if (prices->http_status == 200 && prices->json) {
+        printf("Prices: %s\n", prices->data);
+    }
+    axion_free_response(prices);
+
+    axion_free_client(client);
+    return 0;
+}
+```

@@ -1,0 +1,131 @@
+---
+title: "Supply chain"
+description: "Map the upstream suppliers, downstream customers, and competitor peers for any publicly-traded company."
+---
+
+The supply chain endpoints let you explore the commercial relationships surrounding a given company:
+
+- **Customers** — companies that purchase products or services from the target company (downstream buyers).
+- **Suppliers** — companies from which the target company sources materials, components, or services (upstream vendors).
+- **Peers** — competitor or comparable companies that operate in the same industry segment.
+
+Together these three views let you build a complete picture of a company's ecosystem for risk analysis, due diligence, and portfolio construction.
+
+---
+
+## Functions
+
+### `axion_supply_chain_customers`
+
+Returns a list of known customers — organizations that are reported buyers of the target company's goods or services.
+
+```c
+AxionResponse* axion_supply_chain_customers(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The stock ticker symbol of the company whose customers you want to retrieve (e.g., `"AAPL"`, `"TSMC"`). Case-insensitive.
+</ParamField>
+
+---
+
+### `axion_supply_chain_suppliers`
+
+Returns a list of known suppliers — organizations that sell materials, components, or services to the target company.
+
+```c
+AxionResponse* axion_supply_chain_suppliers(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The stock ticker symbol of the company whose suppliers you want to retrieve.
+</ParamField>
+
+---
+
+### `axion_supply_chain_peers`
+
+Returns a list of peer companies — competitors or comparables that operate in the same market segment and are often used for relative valuation.
+
+```c
+AxionResponse* axion_supply_chain_peers(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The stock ticker symbol of the company whose peers you want to retrieve.
+</ParamField>
+
+---
+
+## Response
+
+All supply chain functions return a heap-allocated `AxionResponse *`. Free it with `axion_response()` when done.
+
+```c
+typedef struct {
+    int http_status;    // HTTP status code (200 on success)
+    char *data;         // Raw JSON string
+    struct cJSON *json; // Parsed JSON object
+    char *error;        // Error message, or NULL on success
+} AxionResponse;
+```
+
+<Warning>
+  Always check `response->error` before accessing `response->json`. If `error` is non-NULL, the request failed and `json` may be NULL.
+</Warning>
+
+---
+
+## Example
+
+The following example retrieves customers, suppliers, and peers for Apple (AAPL).
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+static void print_relationship(
+    const char *label,
+    AxionResponse *resp
+) {
+    if (resp->error) {
+        fprintf(stderr, "%s error: %s\n", label, resp->error);
+    } else {
+        printf("%s (HTTP %d):\n%s\n\n", label, resp->http_status, resp->data);
+    }
+    axion_response(resp);
+}
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    const char *ticker = "AAPL";
+
+    print_relationship("Customers",
+        axion_supply_chain_customers(client, ticker));
+
+    print_relationship("Suppliers",
+        axion_supply_chain_suppliers(client, ticker));
+
+    print_relationship("Peers",
+        axion_supply_chain_peers(client, ticker));
+
+    axion_client(client);
+    return 0;
+}
+```
+
+<Tip>
+  Supplier data is especially useful for contagion analysis. If a key AAPL supplier reports earnings trouble, cross-referencing with `axion_supply_chain_suppliers` lets you quickly identify which of your portfolio holdings share that dependency.
+</Tip>

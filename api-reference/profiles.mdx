@@ -1,0 +1,198 @@
+---
+title: "Profiles"
+description: "Retrieve company profile data including info, summary, statistics, calendar events, and analyst recommendations."
+---
+
+The profiles endpoints return descriptive and analytical data for a given stock ticker. Use these functions to retrieve a company's full profile, key statistics, upcoming events, and analyst sentiment.
+
+## Functions
+
+### `axion_profiles_profile`
+
+Fetches the complete profile for a ticker, combining core company data into a single response.
+
+```c
+AxionResponse* axion_profiles_profile(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /profiles/<ticker>`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol (e.g., `"AAPL"`, `"MSFT"`).
+</ParamField>
+
+---
+
+### `axion_profiles_info`
+
+Returns basic company information such as name, sector, industry, exchange, and description.
+
+```c
+AxionResponse* axion_profiles_info(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /profiles/<ticker>/info`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+### `axion_profiles_summary`
+
+Returns a summary of current market data for the ticker, including price, market cap, and trading volume.
+
+```c
+AxionResponse* axion_profiles_summary(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /profiles/<ticker>/summary`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+### `axion_profiles_statistics`
+
+Returns key financial statistics such as P/E ratio, EPS, beta, dividend yield, and 52-week range.
+
+```c
+AxionResponse* axion_profiles_statistics(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /profiles/<ticker>/statistics`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+### `axion_profiles_calendar`
+
+Returns upcoming calendar events for the company, including earnings dates, dividend ex-dates, and splits.
+
+```c
+AxionResponse* axion_profiles_calendar(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /profiles/<ticker>/calendar`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+### `axion_profiles_recommendation`
+
+Returns aggregated analyst recommendation data, including buy/hold/sell counts and consensus rating.
+
+```c
+AxionResponse* axion_profiles_recommendation(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /profiles/<ticker>/recommendation`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+## Response struct
+
+All profile functions return a pointer to an `AxionResponse` struct:
+
+```c
+typedef struct {
+    int   http_status;  /* HTTP status code (e.g., 200, 404) */
+    char *data;         /* Raw JSON string */
+    struct cJSON *json; /* Parsed cJSON object tree */
+    char *error;        /* Error message, or NULL on success */
+} AxionResponse;
+```
+
+<Note>
+  Always check `response->error` and `response->http_status` before accessing `response->json`. Free the response with `axion_response_free()` when done.
+</Note>
+
+---
+
+## Example
+
+The following example fetches the profile, statistics, and analyst recommendation for AAPL and prints the raw JSON for each.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
+
+    /* Fetch full profile */
+    AxionResponse *profile = axion_profiles_profile(client, "AAPL");
+    if (profile->error) {
+        fprintf(stderr, "Profile error: %s\n", profile->error);
+    } else {
+        printf("Profile [%d]:\n%s\n\n", profile->http_status, profile->data);
+    }
+    axion_response_free(profile);
+
+    /* Fetch key statistics */
+    AxionResponse *stats = axion_profiles_statistics(client, "AAPL");
+    if (stats->error) {
+        fprintf(stderr, "Statistics error: %s\n", stats->error);
+    } else {
+        printf("Statistics [%d]:\n%s\n\n", stats->http_status, stats->data);
+    }
+    axion_response_free(stats);
+
+    /* Fetch analyst recommendation */
+    AxionResponse *rec = axion_profiles_recommendation(client, "AAPL");
+    if (rec->error) {
+        fprintf(stderr, "Recommendation error: %s\n", rec->error);
+    } else {
+        printf("Recommendation [%d]:\n%s\n\n", rec->http_status, rec->data);
+    }
+    axion_response_free(rec);
+
+    axion_client_free(client);
+    return 0;
+}
+```
+
+<Tip>
+  Use `axion_profiles_summary` for lightweight polling of current price and volume data without pulling the full profile payload.
+</Tip>

@@ -1,0 +1,85 @@
+---
+title: "Introduction"
+description: "A C client library for the Axion financial data API"
+---
+
+# Axion C SDK
+
+The Axion C SDK is a lightweight, high-performance client library for the [Axion](https://axionquant.com) financial data API. It gives you direct access to market data, company financials, economic indicators, news, sentiment, SEC filings, and more — all from a simple C interface.
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="wrench" href="/installation">
+    Install prerequisites and build the library for your platform
+  </Card>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Make your first API call in under 5 minutes
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/client">
+    Browse the full function reference with signatures and parameters
+  </Card>
+  <Card title="Guides" icon="book" href="/guides/market-data">
+    In-depth guides for common use cases
+  </Card>
+</CardGroup>
+
+## What you can do
+
+<CardGroup cols={2}>
+  <Card title="Market Data" icon="chart-line">
+    Stocks, crypto, forex, futures, and indices — quotes, tickers, and historical price series
+  </Card>
+  <Card title="Company Profiles" icon="building">
+    Summaries, info, key statistics, calendars, and analyst recommendations
+  </Card>
+  <Card title="Financials" icon="dollar-sign">
+    Income statement, balance sheet, cash flow, and key financial metrics
+  </Card>
+  <Card title="Earnings" icon="chart-bar">
+    Earnings history, trends, index trends, and full quarterly reports
+  </Card>
+  <Card title="SEC Filings" icon="file-text">
+    Search and retrieve SEC filings by ticker, form type, year, and quarter
+  </Card>
+  <Card title="Insiders" icon="users">
+    Ownership data, insider transactions, institutional and fund holdings
+  </Card>
+  <Card title="Economic Data" icon="globe">
+    FRED datasets, economic calendar with importance filtering
+  </Card>
+  <Card title="News & Sentiment" icon="newspaper">
+    Financial news and social, news, and analyst sentiment scores
+  </Card>
+</CardGroup>
+
+## How it works
+
+The SDK wraps the Axion REST API using [libcurl](https://curl.se/libcurl/) for HTTP transport and [cJSON](https://github.com/DaveGamble/cJSON) for JSON parsing. Every API call returns an `AxionResponse` containing the parsed JSON, raw response data, HTTP status code, and any error message.
+
+```c axion_example.c
+#include "axion.h"
+#include <stdio.h>
+
+int main() {
+    AxionClient *client = axion_init("your_api_key_here");
+
+    AxionResponse *response = axion_stocks_prices(
+        client, "AAPL", "2024-01-01", "2024-12-31", "1d"
+    );
+
+    if (response->error) {
+        fprintf(stderr, "Error: %s\n", response->error);
+    } else if (response->json) {
+        char *out = cJSON_Print(response->json);
+        printf("%s\n", out);
+        free(out);
+    }
+
+    axion_response(response);
+    axion_client(client);
+    return 0;
+}
+```
+
+## License
+
+The Axion C SDK is released under the MIT License.

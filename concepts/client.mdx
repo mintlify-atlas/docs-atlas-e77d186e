@@ -1,0 +1,102 @@
+---
+title: "Client"
+description: "How to initialize, use, and clean up the AxionClient."
+---
+
+The `AxionClient` is the entry point for every operation in the Axion C SDK. It holds the credentials and the underlying HTTP handle needed to communicate with the API.
+
+## The AxionClient struct
+
+`AxionClient` is an opaque type — its fields are not exposed in the public header. Internally it stores:
+
+- A copy of your API key (heap-allocated via `strdup`)
+- A `CURL` easy handle used for all HTTP requests
+
+Because you never access its members directly, you always interact with it through the SDK functions.
+
+## Initializing a client
+
+```c
+AxionClient *axion_init(const char *api_key);
+```
+
+`axion_init` performs the following setup steps:
+
+1. Calls `curl_global_init` to initialize libcurl globally.
+2. Creates and configures a `CURL` easy handle.
+3. Allocates and populates the `AxionClient` struct.
+4. Returns a pointer to the client, or `NULL` if initialization failed.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(void) {
+    AxionClient *client = axion_init("your-api-key");
+    if (client == NULL) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return EXIT_FAILURE;
+    }
+
+    /* use the client ... */
+
+    axion_free_client(client);
+    return EXIT_SUCCESS;
+}
+```
+
+<Warning>
+Always check the return value of `axion_init`. It returns `NULL` when libcurl initialization fails or memory allocation fails. Passing a `NULL` client to any other SDK function is undefined behavior.
+</Warning>
+
+## Freeing the client
+
+```c
+void axion_free_client(AxionClient *client); /* also: axion_client() */
+```
+
+When you are done, call `axion_free_client` (aliased as `axion_client()`). It:
+
+1. Frees the copied API key string.
+2. Calls `curl_easy_cleanup` on the CURL handle.
+3. Frees the `AxionClient` struct itself.
+4. Calls `curl_global_cleanup` to tear down libcurl.
+
+<Warning>
+Every client created with `axion_init` must be freed with `axion_free_client`. Skipping this call leaks memory and leaves libcurl in an inconsistent state.
+</Warning>
+
+## Thread safety
+
+`AxionClient` is not thread-safe. The underlying `CURL` easy handle is not designed for concurrent access from multiple threads.
+
+<Note>
+If your application is multithreaded, create one `AxionClient` per thread rather than sharing a single client across threads.
+</Note>
+
+## Best practices
+
+<Tip>
+Create one long-lived `AxionClient` for the lifetime of your program rather than initializing and freeing a client for every API request. `axion_init` calls `curl_global_init`, which is expensive and intended to be called once per process.
+</Tip>
+
+A typical pattern looks like this:
+
+```c
+int main(void) {
+    AxionClient *client = axion_init(getenv("AXION_API_KEY"));
+    if (client == NULL) {
+        fprintf(stderr, "Client initialization failed\n");
+        return EXIT_FAILURE;
+    }
+
+    /* Make many API calls using the same client */
+    do_first_request(client);
+    do_second_request(client);
+
+    /* Single cleanup at program exit */
+    axion_free_client(client);
+    return EXIT_SUCCESS;
+}
+```

@@ -1,0 +1,141 @@
+---
+title: "Forex"
+description: "List forex currency pairs, retrieve pair details, and fetch historical price data."
+---
+
+## axion_forex_tickers
+
+Returns a list of forex currency pair tickers, optionally filtered by country and exchange.
+
+```c
+AxionResponse *axion_forex_tickers(
+    AxionClient *client,
+    const char  *country,
+    const char  *exchange
+);
+```
+
+**Endpoint:** `GET /forex/tickers`
+
+<ParamField path="client" type="AxionClient *" required>
+  Initialized client returned by `axion_init`.
+</ParamField>
+
+<ParamField path="country" type="const char *">
+  ISO 3166-1 alpha-2 country code to filter by (e.g. `"US"`, `"EU"`). Pass `NULL` to return pairs from all countries.
+</ParamField>
+
+<ParamField path="exchange" type="const char *">
+  Exchange or venue identifier to filter by. Pass `NULL` to return pairs from all venues.
+</ParamField>
+
+The `json` field of the response contains an array of currency pair objects. Each object includes the pair symbol, base currency, quote currency, and exchange.
+
+---
+
+## axion_forex_ticker
+
+Returns profile and metadata for a single forex currency pair.
+
+```c
+AxionResponse *axion_forex_ticker(
+    AxionClient *client,
+    const char  *ticker
+);
+```
+
+**Endpoint:** `GET /forex/<ticker>`
+
+<ParamField path="client" type="AxionClient *" required>
+  Initialized client returned by `axion_init`.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  Currency pair symbol (e.g. `"EURUSD"`, `"GBPJPY"`). Case-insensitive on the server.
+</ParamField>
+
+The `json` field of the response contains an object with pair metadata including the symbol, base currency, quote currency, and trading session hours.
+
+---
+
+## axion_forex_prices
+
+Returns OHLCV price bars for a forex currency pair over a specified date range and time frame.
+
+```c
+AxionResponse *axion_forex_prices(
+    AxionClient *client,
+    const char  *ticker,
+    const char  *from_date,
+    const char  *to_date,
+    const char  *frame
+);
+```
+
+**Endpoint:** `GET /forex/<ticker>/prices`
+
+<ParamField path="client" type="AxionClient *" required>
+  Initialized client returned by `axion_init`.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  Currency pair symbol (e.g. `"EURUSD"`).
+</ParamField>
+
+<ParamField path="from_date" type="const char *">
+  Start date in `YYYY-MM-DD` format (e.g. `"2024-01-01"`). Pass `NULL` to use the server default.
+</ParamField>
+
+<ParamField path="to_date" type="const char *">
+  End date in `YYYY-MM-DD` format (e.g. `"2024-12-31"`). Pass `NULL` to use the server default.
+</ParamField>
+
+<ParamField path="frame" type="const char *">
+  Time frame for each bar. Accepted values: `"1d"` (daily), `"1h"` (hourly), `"5m"` (5-minute). Pass `NULL` to use the server default.
+</ParamField>
+
+The `json` field of the response contains an array of price bar objects. Each bar includes fields for the timestamp, open, high, low, close, and volume.
+
+<Note>
+  Forex markets are open Sunday evening through Friday evening (UTC). Weekend bars are not present in daily data.
+</Note>
+
+---
+
+## Example
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_init("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize client\n");
+        return 1;
+    }
+
+    /* Get EURUSD pair details */
+    AxionResponse *ticker = axion_forex_ticker(client, "EURUSD");
+    if (ticker->http_status == 200 && ticker->json) {
+        printf("EURUSD: %s\n", ticker->data);
+    } else {
+        fprintf(stderr, "Error: %s\n", ticker->error ? ticker->error : "unknown");
+    }
+    axion_free_response(ticker);
+
+    /* Fetch hourly EURUSD prices for one week */
+    AxionResponse *prices = axion_forex_prices(
+        client, "EURUSD", "2024-06-01", "2024-06-07", "1h"
+    );
+    if (prices->http_status == 200 && prices->json) {
+        printf("EURUSD prices: %s\n", prices->data);
+    } else {
+        fprintf(stderr, "Error: %s\n", prices->error ? prices->error : "unknown");
+    }
+    axion_free_response(prices);
+
+    axion_free_client(client);
+    return 0;
+}
+```

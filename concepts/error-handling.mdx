@@ -1,0 +1,119 @@
+---
+title: "Error handling"
+description: "How to detect and handle network errors and HTTP errors in the Axion C SDK."
+---
+
+The SDK surfaces two categories of errors through the `AxionResponse` struct. Understanding the difference lets you write robust error handling that covers every failure mode.
+
+## Error categories
+
+### 1. Network and cURL errors
+
+When libcurl cannot complete the request — for example, because DNS resolution failed, the connection was refused, or the request timed out — no HTTP response is received.
+
+- `response->http_status` is `0`
+- `response->data` is `NULL`
+- `response->json` is `NULL`
+- `response->error` is set to the string returned by `curl_easy_strerror`
+
+```c
+/* Example network error message */
+/* response->error == "Could not resolve host" */
+```
+
+### 2. HTTP errors (4xx and 5xx)
+
+When the server returns an error status code, the SDK parses the `message` field from the JSON error body and stores it in `response->error`.
+
+- `response->http_status` is set to the HTTP status code (e.g. `401`, `429`, `500`)
+- `response->data` is set to the raw error body
+- `response->json` is `NULL`
+- `response->error` is set to the `message` value from the JSON error body
+
+```c
+/* Example HTTP error message */
+/* response->http_status == 401                        */
+/* response->error       == "Invalid authentication credentials" */
+```
+
+## Checking for NULL response
+
+If `axion_init` returned `NULL` and you passed that invalid pointer to an SDK function, the function may itself return `NULL`. Always verify the response pointer before dereferencing it.
+
+```c
+AxionResponse *response = axion_some_call(client, ...);
+if (response == NULL) {
+    fprintf(stderr, "Call returned NULL — was the client valid?\n");
+    return;
+}
+```
+
+## The recommended error-handling pattern
+
+Always check `response->error` **before** accessing `response->json`. This single check covers both network failures and HTTP error responses.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+void handle_response(AxionResponse *response) {
+    if (response == NULL) {
+        fprintf(stderr, "No response returned\n");
+        return;
+    }
+
+    /* Check for any error first */
+    if (response->error != NULL) {
+        if (response->http_status == 0) {
+            /* Network or cURL error — no HTTP response received */
+            fprintf(stderr, "Network error: %s\n", response->error);
+        } else {
+            /* HTTP error — server returned 4xx or 5xx */
+            fprintf(stderr, "HTTP %d: %s\n",
+                    response->http_status, response->error);
+        }
+        axion_free_response(response);
+        return;
+    }
+
+    /* Safe to access response->json here */
+    char *text = cJSON_Print(response->json);
+    if (text != NULL) {
+        printf("%s\n", text);
+        free(text);
+    }
+
+    axion_free_response(response);
+}
+```
+
+<Warning>
+Never access `response->json` without first confirming that `response->error` is `NULL`. When an error is present, `json` is always `NULL` and dereferencing it will segfault.
+</Warning>
+
+## Distinguishing error types
+
+If you need to take different actions depending on the error source, use `http_status`:
+
+```c
+if (response->error != NULL) {
+    if (response->http_status == 0) {
+        /* Transport-level failure: retry may help */
+        schedule_retry();
+    } else if (response->http_status == 429) {
+        /* Rate limited: back off before retrying */
+        backoff_and_retry();
+    } else if (response->http_status >= 500) {
+        /* Server error: may be transient */
+        log_server_error(response->http_status, response->error);
+    } else {
+        /* 4xx client error: fix the request, do not retry */
+        log_client_error(response->http_status, response->error);
+    }
+}
+```
+
+<Tip>
+For transient failures (`http_status == 0` or `http_status >= 500`), an exponential backoff retry strategy is generally appropriate. For 4xx errors other than `429`, retrying without changing the request will not help.
+</Tip>

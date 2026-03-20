@@ -1,0 +1,228 @@
+---
+title: "Insiders"
+description: "Retrieve insider and institutional ownership data including fund holdings, individual insider filings, institutional positions, ownership summaries, recent activity, and transaction history."
+---
+
+The insiders endpoints expose ownership and transaction data reported to regulators. Use these functions to understand who owns a stock, how positions are changing, and what recent insider transactions have occurred.
+
+## Function overview
+
+| Function | Returns |
+|---|---|
+| `axion_insiders_funds` | Mutual fund and ETF holdings |
+| `axion_insiders_individuals` | Individual insider ownership and filings |
+| `axion_insiders_institutions` | Institutional (13F) holdings |
+| `axion_insiders_ownership` | Combined ownership summary across all holder types |
+| `axion_insiders_activity` | Recent insider buying and selling activity |
+| `axion_insiders_transactions` | Detailed individual insider transactions |
+
+---
+
+## Functions
+
+### `axion_insiders_funds`
+
+Returns a list of mutual funds and ETFs that hold the ticker, including share counts and percentage of shares outstanding held by each fund.
+
+```c
+AxionResponse* axion_insiders_funds(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /insiders/<ticker>/funds`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol (e.g., `"AAPL"`).
+</ParamField>
+
+---
+
+### `axion_insiders_individuals`
+
+Returns individual insider ownership data derived from SEC Form 4 filings. Includes directors, officers, and 10%+ beneficial owners with their current reported share counts.
+
+```c
+AxionResponse* axion_insiders_individuals(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /insiders/<ticker>/individuals`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<Note>
+  Individual insider data is sourced from SEC Form 4 filings and reflects positions as of the most recent filing date. There may be a delay between a transaction and its appearance in the data.
+</Note>
+
+---
+
+### `axion_insiders_institutions`
+
+Returns institutional holdings data derived from SEC 13F filings. Includes investment managers with over $100M AUM that disclose positions in the ticker each quarter.
+
+```c
+AxionResponse* axion_insiders_institutions(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /insiders/<ticker>/institutions`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+### `axion_insiders_ownership`
+
+Returns a combined ownership summary aggregating data across funds, individuals, and institutions. Provides total shares held, percentage of float, and breakdown by holder type.
+
+```c
+AxionResponse* axion_insiders_ownership(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /insiders/<ticker>/ownership`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<Tip>
+  Use `axion_insiders_ownership` for a high-level ownership overview. Use `axion_insiders_institutions` or `axion_insiders_funds` when you need the full holder list for a specific category.
+</Tip>
+
+---
+
+### `axion_insiders_activity`
+
+Returns a summary of recent insider buying and selling activity, including net share changes and transaction counts over recent periods. Useful for identifying shifts in insider sentiment.
+
+```c
+AxionResponse* axion_insiders_activity(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /insiders/<ticker>/activity`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+### `axion_insiders_transactions`
+
+Returns a detailed list of individual insider transactions, including transaction type (buy/sell/grant), date, price, shares transacted, and the insider's name and title.
+
+```c
+AxionResponse* axion_insiders_transactions(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /insiders/<ticker>/transactions`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<Note>
+  `axion_insiders_activity` gives an aggregated view of recent buying/selling trends, while `axion_insiders_transactions` gives the underlying individual transaction records. Use both when building insider sentiment analysis.
+</Note>
+
+---
+
+## Response struct
+
+All insiders functions return a pointer to an `AxionResponse` struct:
+
+```c
+typedef struct {
+    int   http_status;  /* HTTP status code (e.g., 200, 404) */
+    char *data;         /* Raw JSON string */
+    struct cJSON *json; /* Parsed cJSON object tree */
+    char *error;        /* Error message, or NULL on success */
+} AxionResponse;
+```
+
+---
+
+## Example
+
+The following example retrieves the full ownership picture for AAPL — the combined summary, institutional holders, and recent insider transactions.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
+
+    /* Combined ownership summary */
+    AxionResponse *ownership = axion_insiders_ownership(client, "AAPL");
+    if (ownership->error) {
+        fprintf(stderr, "Ownership error: %s\n", ownership->error);
+    } else {
+        printf("Ownership Summary [%d]:\n%s\n\n",
+               ownership->http_status, ownership->data);
+    }
+    axion_response_free(ownership);
+
+    /* Institutional (13F) holders */
+    AxionResponse *institutions = axion_insiders_institutions(client, "AAPL");
+    if (institutions->error) {
+        fprintf(stderr, "Institutions error: %s\n", institutions->error);
+    } else {
+        printf("Institutional Holders [%d]:\n%s\n\n",
+               institutions->http_status, institutions->data);
+    }
+    axion_response_free(institutions);
+
+    /* Recent insider activity summary */
+    AxionResponse *activity = axion_insiders_activity(client, "AAPL");
+    if (activity->error) {
+        fprintf(stderr, "Activity error: %s\n", activity->error);
+    } else {
+        printf("Insider Activity [%d]:\n%s\n\n",
+               activity->http_status, activity->data);
+    }
+    axion_response_free(activity);
+
+    /* Detailed individual transactions */
+    AxionResponse *transactions = axion_insiders_transactions(client, "AAPL");
+    if (transactions->error) {
+        fprintf(stderr, "Transactions error: %s\n", transactions->error);
+    } else {
+        printf("Insider Transactions [%d]:\n%s\n\n",
+               transactions->http_status, transactions->data);
+    }
+    axion_response_free(transactions);
+
+    axion_client_free(client);
+    return 0;
+}
+```

@@ -1,0 +1,142 @@
+---
+title: "Company Profiles"
+description: "Retrieve company profiles, key statistics, earnings calendars, and analyst recommendations."
+---
+
+The Axion C SDK exposes six profile functions for public companies. Each function targets a distinct level of detail, so you can fetch exactly the data you need without over-fetching.
+
+## Available functions
+
+| Function | What it returns |
+|---|---|
+| `axion_profiles_profile` | Full company profile — description, sector, industry, location, website, executive team, and more |
+| `axion_profiles_info` | Detailed company information — financials overview, employee count, founding date, and identifiers |
+| `axion_profiles_summary` | Brief summary suitable for cards or tooltips — name, ticker, exchange, and short description |
+| `axion_profiles_statistics` | Key statistics — P/E, EPS, market cap, 52-week range, average volume, and similar metrics |
+| `axion_profiles_calendar` | Upcoming and recent earnings dates, dividend dates, and other corporate events |
+| `axion_profiles_recommendation` | Aggregated analyst buy/hold/sell recommendations and price targets |
+
+## Fetching a full profile and statistics
+
+The most common pattern is to fetch the full profile alongside key statistics:
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to create client\n");
+        return 1;
+    }
+
+    // Full company profile
+    AxionResponse *profile = axion_profiles_profile(client, "AAPL");
+    if (profile->error) {
+        fprintf(stderr, "Profile error: %s\n", profile->error);
+    } else {
+        printf("Profile (HTTP %d):\n%s\n", profile->http_status, profile->data);
+    }
+    axion_response(profile);
+
+    // Key statistics
+    AxionResponse *stats = axion_profiles_statistics(client, "AAPL");
+    if (stats->error) {
+        fprintf(stderr, "Statistics error: %s\n", stats->error);
+    } else {
+        printf("Statistics (HTTP %d):\n%s\n", stats->http_status, stats->data);
+    }
+    axion_response(stats);
+
+    axion_client(client);
+    return 0;
+}
+```
+
+<Note>
+  You can reuse the same `AxionClient` across multiple calls. Only call `axion_client` once at the end to free it.
+</Note>
+
+## Fetching the earnings calendar
+
+Use `axion_profiles_calendar` to retrieve upcoming and recent earnings reports, dividend dates, and other corporate events for a ticker:
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) return 1;
+
+    AxionResponse *cal = axion_profiles_calendar(client, "AAPL");
+    if (cal->error) {
+        fprintf(stderr, "Calendar error: %s\n", cal->error);
+    } else {
+        printf("%s\n", cal->data);
+    }
+
+    axion_response(cal);
+    axion_client(client);
+    return 0;
+}
+```
+
+## Fetching analyst recommendations
+
+`axion_profiles_recommendation` returns aggregated analyst sentiment including buy, hold, and sell counts alongside consensus price targets:
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) return 1;
+
+    AxionResponse *rec = axion_profiles_recommendation(client, "AAPL");
+    if (rec->error) {
+        fprintf(stderr, "Recommendation error: %s\n", rec->error);
+    } else {
+        printf("%s\n", rec->data);
+    }
+
+    axion_response(rec);
+    axion_client(client);
+    return 0;
+}
+```
+
+## Choosing the right function
+
+<AccordionGroup>
+  <Accordion title="I want to display a company card or search result">
+    Use `axion_profiles_summary`. It returns a compact payload with just the fields needed for list views and tooltips, minimising bandwidth.
+  </Accordion>
+  <Accordion title="I need full company background for a detail page">
+    Use `axion_profiles_profile` for the richest dataset, or `axion_profiles_info` if you specifically need operational details such as employee count and founding date.
+  </Accordion>
+  <Accordion title="I'm building a valuation or screening tool">
+    Use `axion_profiles_statistics`. It contains market cap, P/E ratio, EPS, beta, average volume, and the 52-week high/low.
+  </Accordion>
+  <Accordion title="I need to know when earnings are scheduled">
+    Use `axion_profiles_calendar`. It covers earnings dates (including time of day), dividend ex-dates, and payment dates.
+  </Accordion>
+  <Accordion title="I want to show analyst consensus">
+    Use `axion_profiles_recommendation`. It provides buy/hold/sell counts and median price targets from aggregated analyst coverage.
+  </Accordion>
+</AccordionGroup>
+
+## Memory management
+
+Free each response immediately after use, and free the client once at the end:
+
+```c
+axion_response(resp);   // free AxionResponse
+axion_client(client);   // free AxionClient
+```
+
+<Warning>
+  Each call to a profile function allocates a new `AxionResponse`. Call `axion_response` on every response you receive, including those that contain errors.
+</Warning>

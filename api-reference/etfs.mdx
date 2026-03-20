@@ -1,0 +1,125 @@
+---
+title: "ETFs"
+description: "Retrieve fund metadata, holdings, and exposure breakdowns for exchange-traded funds."
+---
+
+The ETF endpoints provide three complementary views of any exchange-traded fund:
+
+- **Fund** — high-level fund metadata: name, issuer, expense ratio, AUM, inception date, benchmark index, and more.
+- **Holdings** — the individual securities held by the fund, typically with weight, shares, and market value per position.
+- **Exposure** — aggregated breakdowns of the fund's exposure by sector, geography, asset class, or other dimensions.
+
+---
+
+## Functions
+
+### `axion_etfs_fund`
+
+Returns fund-level metadata for an ETF identified by its ticker symbol.
+
+```c
+AxionResponse* axion_etfs_fund(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The ETF ticker symbol (e.g., `"SPY"`, `"QQQ"`, `"IWM"`). Case-insensitive.
+</ParamField>
+
+---
+
+### `axion_etfs_holdings`
+
+Returns the list of individual securities held by the ETF, including position weights and values.
+
+```c
+AxionResponse* axion_etfs_holdings(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The ETF ticker symbol.
+</ParamField>
+
+<Note>
+  Large ETFs such as SPY hold hundreds of securities. The response may be substantial — consider streaming or paginating if you are displaying results in a UI.
+</Note>
+
+---
+
+### `axion_etfs_exposure`
+
+Returns aggregated exposure breakdowns for the ETF. Typical breakdowns include sector weights (e.g., Technology, Healthcare), geographic allocations (e.g., US, International), and asset class splits (e.g., equity, fixed income).
+
+```c
+AxionResponse* axion_etfs_exposure(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The ETF ticker symbol.
+</ParamField>
+
+---
+
+## Response
+
+All ETF functions return a heap-allocated `AxionResponse *`. Free it with `axion_response()` when done.
+
+```c
+typedef struct {
+    int http_status;    // HTTP status code (200 on success)
+    char *data;         // Raw JSON string
+    struct cJSON *json; // Parsed JSON object
+    char *error;        // Error message, or NULL on success
+} AxionResponse;
+```
+
+<Warning>
+  Always check `response->error` before accessing `response->json`. If `error` is non-NULL, the request failed and `json` may be NULL.
+</Warning>
+
+---
+
+## Example
+
+The following example retrieves fund metadata, holdings, and exposure for SPY (SPDR S&P 500 ETF Trust).
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+static void print_result(const char *label, AxionResponse *resp) {
+    if (resp->error) {
+        fprintf(stderr, "%s error: %s\n", label, resp->error);
+    } else {
+        printf("%s (HTTP %d):\n%s\n\n", label, resp->http_status, resp->data);
+    }
+    axion_response(resp);
+}
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    const char *ticker = "SPY";
+
+    print_result("Fund metadata", axion_etfs_fund(client, ticker));
+    print_result("Holdings",      axion_etfs_holdings(client, ticker));
+    print_result("Exposure",      axion_etfs_exposure(client, ticker));
+
+    axion_client(client);
+    return 0;
+}
+```
+
+<Tip>
+  Use `axion_etfs_exposure` to quickly compare sector tilts across competing ETFs (e.g., SPY vs. IVV vs. VOO) without parsing individual holdings lists.
+</Tip>

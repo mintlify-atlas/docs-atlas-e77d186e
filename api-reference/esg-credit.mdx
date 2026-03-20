@@ -1,0 +1,159 @@
+---
+title: "ESG & Credit"
+description: "Retrieve Environmental, Social, and Governance scores and credit ratings for companies and entities."
+---
+
+This section covers two related data sets:
+
+- **ESG** — Environmental, Social, and Governance scores for publicly-traded companies. These scores quantify a company's performance on sustainability, labor practices, board governance, and related dimensions.
+- **Credit** — Credit ratings sourced from major rating agencies. Use `axion_credit_search` to find an entity by name or ticker, then pass the returned `entity_id` to `axion_credit_ratings` to retrieve that entity's ratings history.
+
+---
+
+## Functions
+
+### `axion_esg_data`
+
+Returns ESG scores for a company identified by ticker symbol. The response typically includes an overall ESG score plus individual environmental (E), social (S), and governance (G) component scores.
+
+```c
+AxionResponse* axion_esg_data(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The stock ticker symbol of the company (e.g., `"AAPL"`, `"MSFT"`). Case-insensitive.
+</ParamField>
+
+---
+
+### `axion_credit_search`
+
+Searches for credit-rated entities by name or ticker. Returns a list of matching entities, each with an `entity_id` that can be passed to `axion_credit_ratings`.
+
+```c
+AxionResponse* axion_credit_search(AxionClient *client, const char *query);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="query" type="const char *" required>
+  A free-text search string. Can be a company name (e.g., `"Apple"`, `"Ford Motor"`) or a ticker symbol.
+</ParamField>
+
+<Note>
+  The search results may include corporate entities, subsidiaries, and sovereign issuers. Review the returned entity names carefully before selecting an `entity_id`.
+</Note>
+
+---
+
+### `axion_credit_ratings`
+
+Returns the credit ratings history for a specific entity. Ratings are sourced from agencies such as Moody's, S&P, and Fitch.
+
+```c
+AxionResponse* axion_credit_ratings(AxionClient *client, const char *entity_id);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="entity_id" type="const char *" required>
+  The unique entity identifier returned by `axion_credit_search`. Do not construct this value manually.
+</ParamField>
+
+---
+
+## Response
+
+All functions return a heap-allocated `AxionResponse *`. Free it with `axion_response()` when done.
+
+```c
+typedef struct {
+    int http_status;    // HTTP status code (200 on success)
+    char *data;         // Raw JSON string
+    struct cJSON *json; // Parsed JSON object
+    char *error;        // Error message, or NULL on success
+} AxionResponse;
+```
+
+<Warning>
+  Always check `response->error` before accessing `response->json`. If `error` is non-NULL, the request failed and `json` may be NULL.
+</Warning>
+
+---
+
+## Example
+
+The following example fetches ESG scores for Apple, searches for Apple's credit entity, and retrieves its ratings.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+#include <string.h>
+#include "cJSON.h"
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+
+    /* --- ESG data for AAPL --- */
+    AxionResponse *esg = axion_esg_data(client, "AAPL");
+    if (esg->error) {
+        fprintf(stderr, "ESG error: %s\n", esg->error);
+    } else {
+        printf("ESG (HTTP %d):\n%s\n\n", esg->http_status, esg->data);
+    }
+    axion_response(esg);
+
+    /* --- Search for Apple's credit entity --- */
+    AxionResponse *search = axion_credit_search(client, "Apple");
+    if (search->error) {
+        fprintf(stderr, "Credit search error: %s\n", search->error);
+        axion_response(search);
+        axion_client(client);
+        return 1;
+    }
+
+    /* Extract the first entity_id from the results */
+    const char *entity_id = NULL;
+    if (search->json) {
+        cJSON *first = cJSON_GetArrayItem(search->json, 0);
+        if (first) {
+            cJSON *id_field = cJSON_GetObjectItem(first, "entity_id");
+            if (id_field) entity_id = id_field->valuestring;
+        }
+    }
+
+    if (!entity_id) {
+        fprintf(stderr, "No entity found for query 'Apple'\n");
+        axion_response(search);
+        axion_client(client);
+        return 1;
+    }
+
+    printf("Using entity_id: %s\n", entity_id);
+    axion_response(search);
+
+    /* --- Credit ratings for the entity --- */
+    AxionResponse *ratings = axion_credit_ratings(client, entity_id);
+    if (ratings->error) {
+        fprintf(stderr, "Credit ratings error: %s\n", ratings->error);
+    } else {
+        printf("Credit ratings (HTTP %d):\n%s\n", ratings->http_status, ratings->data);
+    }
+    axion_response(ratings);
+
+    axion_client(client);
+    return 0;
+}
+```
+
+<Tip>
+  Cache `entity_id` values locally. Credit entities rarely change identifiers, so repeated searches for the same company add unnecessary latency.
+</Tip>

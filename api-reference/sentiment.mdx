@@ -1,0 +1,145 @@
+---
+title: "Sentiment"
+description: "Retrieve combined, social media, news, and analyst sentiment scores for a given ticker."
+---
+
+The sentiment endpoints provide quantitative sentiment signals derived from multiple data sources. Each function targets a different information channel, letting you compare how social media chatter, news coverage, and analyst opinion diverge or converge on a single stock.
+
+## Sentiment types
+
+| Function | Source | What it measures |
+|---|---|---|
+| `axion_sentiment_all` | Combined | Aggregate score across all sentiment sources |
+| `axion_sentiment_social` | Social media | Mentions and tone on platforms such as Reddit, X/Twitter, and StockTwits |
+| `axion_sentiment_news` | News articles | Sentiment extracted from financial news headlines and body text |
+| `axion_sentiment_analyst` | Analyst ratings | Bullish/bearish signal derived from analyst buy, hold, and sell ratings |
+
+---
+
+## Functions
+
+### `axion_sentiment_all`
+
+Returns a combined sentiment score that aggregates signals from social media, news, and analyst sources into a single weighted value.
+
+```c
+AxionResponse* axion_sentiment_all(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The stock ticker symbol (e.g., `"AAPL"`, `"NVDA"`). Case-insensitive.
+</ParamField>
+
+---
+
+### `axion_sentiment_social`
+
+Returns sentiment derived exclusively from social media activity — post volume, engagement, and tone. Useful for detecting retail investor momentum and short squeezes early.
+
+```c
+AxionResponse* axion_sentiment_social(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+### `axion_sentiment_news`
+
+Returns sentiment scored from financial news articles published about the company. Scores reflect the tone and language of recent headlines and article bodies.
+
+```c
+AxionResponse* axion_sentiment_news(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+### `axion_sentiment_analyst`
+
+Returns a sentiment signal derived from Wall Street analyst ratings. The score reflects the current distribution of buy, hold, and sell recommendations.
+
+```c
+AxionResponse* axion_sentiment_analyst(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+## Response
+
+All sentiment functions return a heap-allocated `AxionResponse *`. Free it with `axion_response()` when done.
+
+```c
+typedef struct {
+    int http_status;    // HTTP status code (200 on success)
+    char *data;         // Raw JSON string
+    struct cJSON *json; // Parsed JSON object
+    char *error;        // Error message, or NULL on success
+} AxionResponse;
+```
+
+<Warning>
+  Always check `response->error` before accessing `response->json`. If `error` is non-NULL, the request failed and `json` may be NULL.
+</Warning>
+
+---
+
+## Example
+
+The following example fetches all four sentiment types for NVDA and prints each score.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+static void print_sentiment(const char *label, AxionResponse *resp) {
+    if (resp->error) {
+        fprintf(stderr, "%s error: %s\n", label, resp->error);
+    } else {
+        printf("%s (HTTP %d):\n%s\n\n", label, resp->http_status, resp->data);
+    }
+    axion_response(resp);
+}
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    const char *ticker = "NVDA";
+
+    print_sentiment("All",      axion_sentiment_all(client, ticker));
+    print_sentiment("Social",   axion_sentiment_social(client, ticker));
+    print_sentiment("News",     axion_sentiment_news(client, ticker));
+    print_sentiment("Analyst",  axion_sentiment_analyst(client, ticker));
+
+    axion_client(client);
+    return 0;
+}
+```
+
+<Tip>
+  Compare `axion_sentiment_social` against `axion_sentiment_analyst` to spot divergence between retail and institutional opinion — a common leading indicator of volatility.
+</Tip>

@@ -1,0 +1,135 @@
+---
+title: "News"
+description: "Retrieve financial news articles by general feed, company ticker, country, or category."
+---
+
+The news endpoints return recent financial news articles. You can fetch the general market news feed or narrow results to a specific company, country, or topic category.
+
+## Functions
+
+### `axion_news_general`
+
+Fetches the top-level general market news feed with no filtering applied. Use this as a broad market pulse.
+
+```c
+AxionResponse* axion_news_general(AxionClient *client);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+---
+
+### `axion_news_company`
+
+Fetches news articles specifically about a single publicly-traded company, identified by its ticker symbol.
+
+```c
+AxionResponse* axion_news_company(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The stock ticker symbol of the company (e.g., `"AAPL"`, `"TSLA"`, `"MSFT"`). Case-insensitive.
+</ParamField>
+
+---
+
+### `axion_news_country`
+
+Fetches news articles filtered by a specific country. Useful for monitoring regional market developments.
+
+```c
+AxionResponse* axion_news_country(AxionClient *client, const char *country);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="country" type="const char *" required>
+  The country name or ISO country code to filter news by (e.g., `"US"`, `"Germany"`, `"JP"`).
+</ParamField>
+
+---
+
+### `axion_news_category`
+
+Fetches news articles filtered by a topic category such as earnings, mergers, or macroeconomics.
+
+```c
+AxionResponse* axion_news_category(AxionClient *client, const char *category);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="category" type="const char *" required>
+  The news category to filter by (e.g., `"earnings"`, `"mergers"`, `"macro"`, `"ipo"`).
+</ParamField>
+
+---
+
+## Response
+
+All news functions return a heap-allocated `AxionResponse *`. Free it with `axion_response()` when done.
+
+```c
+typedef struct {
+    int http_status;   // HTTP status code (200 on success)
+    char *data;        // Raw JSON string
+    struct cJSON *json; // Parsed JSON object
+    char *error;       // Error message, or NULL on success
+} AxionResponse;
+```
+
+<Warning>
+  Always check `response->error` before accessing `response->json`. If `error` is non-NULL, the request failed and `json` may be NULL.
+</Warning>
+
+---
+
+## Example
+
+The following example fetches the general market news feed, then fetches company-specific news for Apple (AAPL).
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+
+    /* --- General market news --- */
+    AxionResponse *general = axion_news_general(client);
+
+    if (general->error) {
+        fprintf(stderr, "Error fetching general news: %s\n", general->error);
+    } else {
+        printf("General news HTTP %d:\n%s\n", general->http_status, general->data);
+    }
+    axion_response(general);
+
+    /* --- Company news for AAPL --- */
+    AxionResponse *company = axion_news_company(client, "AAPL");
+
+    if (company->error) {
+        fprintf(stderr, "Error fetching AAPL news: %s\n", company->error);
+    } else {
+        printf("AAPL news HTTP %d:\n%s\n", company->http_status, company->data);
+    }
+    axion_response(company);
+
+    axion_client(client);
+    return 0;
+}
+```
+
+<Tip>
+  Use `axion_news_category` with `"earnings"` around quarterly reporting periods to capture high-signal market-moving articles.
+</Tip>

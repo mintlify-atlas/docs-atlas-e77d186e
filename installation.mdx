@@ -1,0 +1,119 @@
+---
+title: "Installation"
+description: "Build and install the Axion C SDK to start making financial data requests from your C applications."
+---
+
+## Prerequisites
+
+Before building the SDK, make sure the following are available on your system:
+
+- **GCC** or **Clang** (C99 or later)
+- **libcurl** with OpenSSL support (`libcurl4-openssl-dev` on Debian/Ubuntu)
+- **make**
+- **cJSON** — vendored in `vendor/` and compiled automatically; no separate installation required
+
+<CodeGroup>
+
+```bash Ubuntu / Debian
+sudo apt-get update
+sudo apt-get install -y gcc make libcurl4-openssl-dev
+```
+
+```bash macOS (Homebrew)
+brew install curl
+# GCC and make are included with Xcode Command Line Tools:
+xcode-select --install
+```
+
+</CodeGroup>
+
+## Building the library
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/axionquant/axion-c-sdk.git
+    cd axion-c-sdk
+    ```
+  </Step>
+
+  <Step title="Build the shared and static libraries">
+    Run `make` to compile all sources, including the vendored cJSON, and produce both library targets:
+
+    ```bash
+    make
+    ```
+
+    This produces:
+
+    - `libaxion.so` — shared library for dynamic linking
+    - `libaxion.a` — static archive for embedding in your binary
+    - `example` — a standalone example binary
+  </Step>
+
+  <Step title="Install system-wide (optional)">
+    Copy the library and header to standard system paths so you can link against them from any project:
+
+    ```bash
+    sudo cp libaxion.so /usr/local/lib/
+    sudo cp libaxion.a  /usr/local/lib/
+    sudo cp include/axion.h /usr/local/include/
+    sudo ldconfig
+    ```
+  </Step>
+</Steps>
+
+## Including the header
+
+In any C source file that uses the SDK, add the following include:
+
+```c
+#include <axion.h>
+```
+
+If you have not installed the library system-wide, pass `-Iinclude` to the compiler so it can locate `axion.h` relative to the SDK root.
+
+## Compiling your program
+
+<CodeGroup>
+
+```bash Dynamic linking (libaxion.so)
+gcc -o myapp myapp.c -laxion -lcurl
+```
+
+```bash Static linking (libaxion.a)
+gcc -o myapp myapp.c libaxion.a -lcurl
+```
+
+```bash Without system-wide install
+gcc -Ipath/to/axion-c-sdk/include \
+    -o myapp myapp.c \
+    path/to/axion-c-sdk/libaxion.a \
+    -lcurl
+```
+
+</CodeGroup>
+
+<Note>
+  When using the shared library (`libaxion.so`) and it is not in a standard library path, set `LD_LIBRARY_PATH` at runtime:
+
+  ```bash
+  export LD_LIBRARY_PATH=/path/to/axion-c-sdk:$LD_LIBRARY_PATH
+  ./myapp
+  ```
+</Note>
+
+## Project structure
+
+```
+axion-c-sdk/
+├── include/
+│   └── axion.h          # Public API header
+├── src/
+│   └── axion.c          # SDK implementation
+├── vendor/
+│   └── cJSON.c          # Vendored JSON parser (compiled automatically)
+├── Makefile
+├── libaxion.so          # Built output: shared library
+└── libaxion.a           # Built output: static archive
+```

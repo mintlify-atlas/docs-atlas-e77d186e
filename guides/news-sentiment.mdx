@@ -1,0 +1,139 @@
+---
+title: "News and Sentiment"
+description: "Fetch general and company-specific news, then combine it with social, news, and analyst sentiment signals."
+---
+
+The Axion C SDK provides two complementary groups of functions for understanding market context around any ticker: news functions that surface recent articles and headlines, and sentiment functions that aggregate qualitative signals from social media, news sources, and analyst coverage.
+
+## News functions
+
+| Function | What it returns |
+|---|---|
+| `axion_news_general(client)` | Broad market news headlines not tied to a specific company |
+| `axion_news_company(client, ticker)` | News articles mentioning or directly covering the given ticker |
+| `axion_news_country(client, country)` | News filtered by country (e.g. `"US"`, `"GB"`, `"JP"`) |
+| `axion_news_category(client, category)` | News filtered by topic category (e.g. `"earnings"`, `"mergers"`, `"macro"`) |
+
+## Sentiment functions
+
+| Function | What it returns |
+|---|---|
+| `axion_sentiment_all(client, ticker)` | Aggregated sentiment across all sources for the ticker |
+| `axion_sentiment_social(client, ticker)` | Sentiment derived from social media mentions and posts |
+| `axion_sentiment_news(client, ticker)` | Sentiment derived from news article tone and coverage |
+| `axion_sentiment_analyst(client, ticker)` | Sentiment derived from analyst report language and ratings |
+
+<Info>
+  Sentiment values are typically expressed as a score (positive/neutral/negative) with a confidence or volume indicator. Check the `data` or `json` fields of `AxionResponse` for the exact schema.
+</Info>
+
+## Combining news and sentiment
+
+Using news and sentiment together gives you both the raw events (what is being reported) and the market reaction (how the market feels about it). A common pattern:
+
+<Steps>
+  <Step title="Fetch company news">
+    Pull recent articles for the ticker using `axion_news_company`.
+  </Step>
+  <Step title="Fetch aggregated sentiment">
+    Pull the combined sentiment score using `axion_sentiment_all`, then drill into `axion_sentiment_social` or `axion_sentiment_news` for source-level detail.
+  </Step>
+  <Step title="Cross-reference">
+    Compare headline volume from the news response against sentiment score direction to identify whether coverage is driving positive or negative market reaction.
+  </Step>
+</Steps>
+
+## Example: AAPL news and sentiment
+
+The following example fetches company-specific news alongside all three sentiment signals for Apple.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to create client\n");
+        return 1;
+    }
+
+    // Company news
+    AxionResponse *news = axion_news_company(client, "AAPL");
+    if (news->error) {
+        fprintf(stderr, "News error: %s\n", news->error);
+    } else {
+        printf("News (HTTP %d):\n%s\n\n", news->http_status, news->data);
+    }
+    axion_response(news);
+
+    // Aggregated sentiment (all sources)
+    AxionResponse *sent_all = axion_sentiment_all(client, "AAPL");
+    if (sent_all->error) {
+        fprintf(stderr, "Sentiment (all) error: %s\n", sent_all->error);
+    } else {
+        printf("Sentiment - All (HTTP %d):\n%s\n\n", sent_all->http_status, sent_all->data);
+    }
+    axion_response(sent_all);
+
+    // Social sentiment
+    AxionResponse *sent_social = axion_sentiment_social(client, "AAPL");
+    if (sent_social->error) {
+        fprintf(stderr, "Sentiment (social) error: %s\n", sent_social->error);
+    } else {
+        printf("Sentiment - Social (HTTP %d):\n%s\n\n", sent_social->http_status, sent_social->data);
+    }
+    axion_response(sent_social);
+
+    // News-derived sentiment
+    AxionResponse *sent_news = axion_sentiment_news(client, "AAPL");
+    if (sent_news->error) {
+        fprintf(stderr, "Sentiment (news) error: %s\n", sent_news->error);
+    } else {
+        printf("Sentiment - News (HTTP %d):\n%s\n\n", sent_news->http_status, sent_news->data);
+    }
+    axion_response(sent_news);
+
+    // Analyst sentiment
+    AxionResponse *sent_analyst = axion_sentiment_analyst(client, "AAPL");
+    if (sent_analyst->error) {
+        fprintf(stderr, "Sentiment (analyst) error: %s\n", sent_analyst->error);
+    } else {
+        printf("Sentiment - Analyst (HTTP %d):\n%s\n\n", sent_analyst->http_status, sent_analyst->data);
+    }
+    axion_response(sent_analyst);
+
+    axion_client(client);
+    return 0;
+}
+```
+
+## Filtering news by country or category
+
+Use `axion_news_country` and `axion_news_category` when you want broader market context rather than ticker-specific coverage:
+
+```c
+// US market news
+AxionResponse *us_news = axion_news_country(client, "US");
+
+// Earnings-related news across the market
+AxionResponse *earnings_news = axion_news_category(client, "earnings");
+
+// General market headlines
+AxionResponse *general = axion_news_general(client);
+```
+
+<Tip>
+  `axion_news_general` takes no filter parameters — it returns top-level market news suitable for a homepage feed or market overview widget.
+</Tip>
+
+## Memory management
+
+```c
+axion_response(resp);   // free AxionResponse
+axion_client(client);   // free AxionClient
+```
+
+<Warning>
+  Each function call allocates a new `AxionResponse`. Call `axion_response` on every response, including those containing errors, to avoid memory leaks.
+</Warning>

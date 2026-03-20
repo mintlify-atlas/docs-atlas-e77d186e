@@ -1,0 +1,425 @@
+---
+title: "Financials"
+description: "Retrieve historical and current financial statement data including income statement, balance sheet, cash flow, share counts, and aggregate metrics."
+---
+
+The financials endpoints expose time-series financial data for a given ticker. Most functions accept a `periods` parameter to control how many historical periods are returned.
+
+## The `periods` parameter
+
+All time-series financial functions accept an integer `periods` argument:
+
+- Pass `0` to use the API default (typically the most recent period).
+- Pass a positive integer (e.g., `4`) to retrieve that many periods of historical data.
+
+<Note>
+  Period granularity (annual vs. quarterly) is determined by the API based on the endpoint. Refer to individual endpoint descriptions for details.
+</Note>
+
+---
+
+## Income statement
+
+### `axion_financials_revenue`
+
+Returns total revenue over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_revenue(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/revenue[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+### `axion_financials_net_income`
+
+Returns net income (profit after taxes) over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_net_income(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/netincome[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+## Balance sheet
+
+### `axion_financials_total_assets`
+
+Returns total assets from the balance sheet over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_total_assets(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/total/assets[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+### `axion_financials_total_liabilities`
+
+Returns total liabilities from the balance sheet over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_total_liabilities(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/total/liabilities[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+### `axion_financials_stockholders_equity`
+
+Returns total stockholders' equity (assets minus liabilities) over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_stockholders_equity(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/stockholdersequity[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+### `axion_financials_current_assets`
+
+Returns current assets (assets expected to be converted to cash within one year) over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_current_assets(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/current/assets[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+### `axion_financials_current_liabilities`
+
+Returns current liabilities (obligations due within one year) over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_current_liabilities(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/current/liabilities[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+## Cash flow
+
+### `axion_financials_operating_cash_flow`
+
+Returns cash generated from core business operations over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_operating_cash_flow(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/cashflow/operating[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+### `axion_financials_capital_expenditures`
+
+Returns capital expenditures (spending on property, plant, and equipment) over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_capital_expenditures(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/capitalexpenditures[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+### `axion_financials_free_cash_flow`
+
+Returns free cash flow (operating cash flow minus capital expenditures) over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_free_cash_flow(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/cashflow/free[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+## Shares
+
+### `axion_financials_shares_outstanding_basic`
+
+Returns the basic shares outstanding count (excludes dilutive securities) over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_shares_outstanding_basic(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/sharesoutstanding/basic[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+### `axion_financials_shares_outstanding_diluted`
+
+Returns diluted shares outstanding (includes options, warrants, and convertible securities) over the requested number of periods.
+
+```c
+AxionResponse* axion_financials_shares_outstanding_diluted(AxionClient *client, const char *ticker, int periods);
+```
+
+**Endpoint:** `GET /financials/<ticker>/sharesoutstanding/diluted[?periods=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="periods" type="int">
+  Number of historical periods to return. Pass `0` for the API default.
+</ParamField>
+
+---
+
+## Aggregates
+
+### `axion_financials_metrics`
+
+Returns computed financial metrics including margins, ratios, and growth rates derived from the underlying financial statements. Does not accept a `periods` parameter.
+
+```c
+AxionResponse* axion_financials_metrics(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /financials/<ticker>/metrics`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+### `axion_financials_snapshot`
+
+Returns a point-in-time snapshot of the most recent values across all financial statement categories — a convenient single-call summary. Does not accept a `periods` parameter.
+
+```c
+AxionResponse* axion_financials_snapshot(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /financials/<ticker>/snapshot`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<Tip>
+  Use `axion_financials_snapshot` when you need a broad overview and want to avoid multiple API calls. Use individual endpoints when you need precise control over period depth.
+</Tip>
+
+---
+
+## Response struct
+
+All financials functions return a pointer to an `AxionResponse` struct:
+
+```c
+typedef struct {
+    int   http_status;  /* HTTP status code (e.g., 200, 404) */
+    char *data;         /* Raw JSON string */
+    struct cJSON *json; /* Parsed cJSON object tree */
+    char *error;        /* Error message, or NULL on success */
+} AxionResponse;
+```
+
+---
+
+## Example
+
+The following example retrieves 8 periods of revenue and free cash flow for AAPL, then fetches the aggregate snapshot.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
+
+    /* Fetch 8 periods of revenue */
+    AxionResponse *revenue = axion_financials_revenue(client, "AAPL", 8);
+    if (revenue->error) {
+        fprintf(stderr, "Revenue error: %s\n", revenue->error);
+    } else {
+        printf("Revenue (8 periods) [%d]:\n%s\n\n",
+               revenue->http_status, revenue->data);
+    }
+    axion_response_free(revenue);
+
+    /* Fetch 8 periods of free cash flow */
+    AxionResponse *fcf = axion_financials_free_cash_flow(client, "AAPL", 8);
+    if (fcf->error) {
+        fprintf(stderr, "Free cash flow error: %s\n", fcf->error);
+    } else {
+        printf("Free Cash Flow (8 periods) [%d]:\n%s\n\n",
+               fcf->http_status, fcf->data);
+    }
+    axion_response_free(fcf);
+
+    /* Fetch aggregate financial snapshot */
+    AxionResponse *snap = axion_financials_snapshot(client, "AAPL");
+    if (snap->error) {
+        fprintf(stderr, "Snapshot error: %s\n", snap->error);
+    } else {
+        printf("Snapshot [%d]:\n%s\n\n", snap->http_status, snap->data);
+    }
+    axion_response_free(snap);
+
+    axion_client_free(client);
+    return 0;
+}
+```

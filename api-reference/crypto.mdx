@@ -1,0 +1,136 @@
+---
+title: "Crypto"
+description: "List cryptocurrency tickers, retrieve ticker details, and fetch historical price data."
+---
+
+## axion_crypto_tickers
+
+Returns a list of cryptocurrency tickers, optionally filtered by asset type.
+
+```c
+AxionResponse *axion_crypto_tickers(
+    AxionClient *client,
+    const char  *type
+);
+```
+
+**Endpoint:** `GET /crypto/tickers`
+
+<ParamField path="client" type="AxionClient *" required>
+  Initialized client returned by `axion_init`.
+</ParamField>
+
+<ParamField path="type" type="const char *">
+  Asset type filter (e.g. `"spot"`, `"perpetual"`). Pass `NULL` to return all types.
+</ParamField>
+
+The `json` field of the response contains an array of ticker objects. Each object includes the ticker symbol, full name, and asset type.
+
+---
+
+## axion_crypto_ticker
+
+Returns profile and metadata for a single cryptocurrency ticker.
+
+```c
+AxionResponse *axion_crypto_ticker(
+    AxionClient *client,
+    const char  *ticker
+);
+```
+
+**Endpoint:** `GET /crypto/<ticker>`
+
+<ParamField path="client" type="AxionClient *" required>
+  Initialized client returned by `axion_init`.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  Cryptocurrency ticker symbol (e.g. `"BTC"`, `"ETH"`). Case-insensitive on the server.
+</ParamField>
+
+The `json` field of the response contains an object with ticker metadata including the symbol, full name, market cap, circulating supply, and 24-hour volume.
+
+---
+
+## axion_crypto_prices
+
+Returns OHLCV price bars for a cryptocurrency over a specified date range and time frame.
+
+```c
+AxionResponse *axion_crypto_prices(
+    AxionClient *client,
+    const char  *ticker,
+    const char  *from_date,
+    const char  *to_date,
+    const char  *frame
+);
+```
+
+**Endpoint:** `GET /crypto/<ticker>/prices`
+
+<ParamField path="client" type="AxionClient *" required>
+  Initialized client returned by `axion_init`.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  Cryptocurrency ticker symbol (e.g. `"BTC"`, `"ETH"`).
+</ParamField>
+
+<ParamField path="from_date" type="const char *">
+  Start date in `YYYY-MM-DD` format (e.g. `"2024-01-01"`). Pass `NULL` to use the server default.
+</ParamField>
+
+<ParamField path="to_date" type="const char *">
+  End date in `YYYY-MM-DD` format (e.g. `"2024-12-31"`). Pass `NULL` to use the server default.
+</ParamField>
+
+<ParamField path="frame" type="const char *">
+  Time frame for each bar. Accepted values: `"1d"` (daily), `"1h"` (hourly), `"5m"` (5-minute). Pass `NULL` to use the server default.
+</ParamField>
+
+The `json` field of the response contains an array of price bar objects. Each bar includes fields for the timestamp, open, high, low, close, and volume.
+
+<Note>
+  Cryptocurrency markets run 24/7. When using `"1h"` or `"5m"` frames, responses can be large for long date ranges.
+</Note>
+
+---
+
+## Example
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_init("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize client\n");
+        return 1;
+    }
+
+    /* Get Bitcoin ticker details */
+    AxionResponse *ticker = axion_crypto_ticker(client, "BTC");
+    if (ticker->http_status == 200 && ticker->json) {
+        printf("BTC: %s\n", ticker->data);
+    } else {
+        fprintf(stderr, "Error: %s\n", ticker->error ? ticker->error : "unknown");
+    }
+    axion_free_response(ticker);
+
+    /* Fetch daily BTC prices for Q1 2024 */
+    AxionResponse *prices = axion_crypto_prices(
+        client, "BTC", "2024-01-01", "2024-03-31", "1d"
+    );
+    if (prices->http_status == 200 && prices->json) {
+        printf("BTC prices: %s\n", prices->data);
+    } else {
+        fprintf(stderr, "Error: %s\n", prices->error ? prices->error : "unknown");
+    }
+    axion_free_response(prices);
+
+    axion_free_client(client);
+    return 0;
+}
+```

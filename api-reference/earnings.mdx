@@ -1,0 +1,185 @@
+---
+title: "Earnings"
+description: "Retrieve earnings history, analyst estimate trends, EPS index data, and detailed per-quarter earnings reports for a given ticker."
+---
+
+The earnings endpoints provide EPS actuals and estimates at multiple levels of granularity — from full historical records down to a single quarterly report.
+
+## Function overview
+
+| Function | Description |
+|---|---|
+| `axion_earnings_history` | All historical EPS actuals and surprises |
+| `axion_earnings_trend` | Analyst EPS estimate revisions and trends |
+| `axion_earnings_index` | Indexed EPS data for charting and comparison |
+| `axion_earnings_report` | A single quarter's detailed earnings report |
+
+---
+
+## Functions
+
+### `axion_earnings_history`
+
+Returns the full earnings history for a ticker, including reported EPS, estimated EPS, and surprise percentage for each past quarter.
+
+```c
+AxionResponse* axion_earnings_history(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /earnings/<ticker>/history`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol (e.g., `"AAPL"`).
+</ParamField>
+
+---
+
+### `axion_earnings_trend`
+
+Returns analyst EPS estimate trends, showing how consensus estimates have changed over time for upcoming earnings periods. Useful for detecting estimate revision momentum.
+
+```c
+AxionResponse* axion_earnings_trend(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /earnings/<ticker>/trend`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<Note>
+  `axion_earnings_trend` reflects forward-looking estimate revisions, while `axion_earnings_history` reflects past actuals. Use both together for a complete picture of earnings quality and analyst sentiment.
+</Note>
+
+---
+
+### `axion_earnings_index`
+
+Returns indexed EPS data suitable for charting and cross-company comparison. Values are normalized so that relative EPS growth is easy to compare across tickers.
+
+```c
+AxionResponse* axion_earnings_index(AxionClient *client, const char *ticker);
+```
+
+**Endpoint:** `GET /earnings/<ticker>/index`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+---
+
+### `axion_earnings_report`
+
+Returns a detailed earnings report for a specific fiscal quarter, including revenue, EPS actuals and estimates, guidance, and other reported metrics.
+
+```c
+AxionResponse* axion_earnings_report(
+    AxionClient   *client,
+    const char    *ticker,
+    const char    *year,
+    const char    *quarter
+);
+```
+
+**Endpoint:** `GET /earnings/<ticker>/report?year=<year>&quarter=<quarter>`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="year" type="const char*" required>
+  Four-digit fiscal year string (e.g., `"2024"`).
+</ParamField>
+
+<ParamField path="quarter" type="const char*" required>
+  Fiscal quarter string. Accepted values: `"Q1"`, `"Q2"`, `"Q3"`, `"Q4"`.
+</ParamField>
+
+<Warning>
+  Fiscal quarters may not align with calendar quarters for all companies. Verify the company's fiscal year end before constructing year and quarter values.
+</Warning>
+
+---
+
+## Response struct
+
+All earnings functions return a pointer to an `AxionResponse` struct:
+
+```c
+typedef struct {
+    int   http_status;  /* HTTP status code (e.g., 200, 404) */
+    char *data;         /* Raw JSON string */
+    struct cJSON *json; /* Parsed cJSON object tree */
+    char *error;        /* Error message, or NULL on success */
+} AxionResponse;
+```
+
+---
+
+## Example
+
+The following example fetches earnings history, the current estimate trend, and the detailed Q1 2024 report for AAPL.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
+
+    /* Full earnings history */
+    AxionResponse *history = axion_earnings_history(client, "AAPL");
+    if (history->error) {
+        fprintf(stderr, "History error: %s\n", history->error);
+    } else {
+        printf("Earnings History [%d]:\n%s\n\n",
+               history->http_status, history->data);
+    }
+    axion_response_free(history);
+
+    /* Analyst estimate trend */
+    AxionResponse *trend = axion_earnings_trend(client, "AAPL");
+    if (trend->error) {
+        fprintf(stderr, "Trend error: %s\n", trend->error);
+    } else {
+        printf("Earnings Trend [%d]:\n%s\n\n",
+               trend->http_status, trend->data);
+    }
+    axion_response_free(trend);
+
+    /* Detailed report for Q1 fiscal 2024 */
+    AxionResponse *report = axion_earnings_report(client, "AAPL", "2024", "Q1");
+    if (report->error) {
+        fprintf(stderr, "Report error: %s\n", report->error);
+    } else {
+        printf("Q1 2024 Report [%d]:\n%s\n\n",
+               report->http_status, report->data);
+    }
+    axion_response_free(report);
+
+    axion_client_free(client);
+    return 0;
+}
+```

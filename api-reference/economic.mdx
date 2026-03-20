@@ -1,0 +1,193 @@
+---
+title: "Economic data"
+description: "Search macroeconomic data series, retrieve historical datasets, and query the economic events calendar."
+---
+
+The economic endpoints provide access to macroeconomic time-series data and a forward-looking economic events calendar.
+
+- **Search** — find available data series by keyword (backed by sources such as FRED).
+- **Dataset** — download historical data points for a known series ID.
+- **Calendar** — query scheduled economic releases and events, with flexible date, country, importance, currency, and category filters.
+
+---
+
+## Functions
+
+### `axion_econ_search`
+
+Searches for available economic data series by keyword. Returns metadata about matching series including their IDs, which you can pass to `axion_econ_dataset`.
+
+```c
+AxionResponse* axion_econ_search(AxionClient *client, const char *query);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="query" type="const char *" required>
+  A keyword or phrase to search for (e.g., `"GDP"`, `"unemployment rate"`, `"federal funds"`). Results include series IDs you can use with `axion_econ_dataset`.
+</ParamField>
+
+---
+
+### `axion_econ_dataset`
+
+Retrieves the full historical time-series for a specific data series, identified by its series ID. Common FRED series IDs include `"GDP"` (US Gross Domestic Product), `"UNRATE"` (US unemployment rate), and `"FEDFUNDS"` (federal funds effective rate).
+
+```c
+AxionResponse* axion_econ_dataset(AxionClient *client, const char *series_id);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="series_id" type="const char *" required>
+  The series identifier (e.g., `"GDP"`, `"UNRATE"`, `"FEDFUNDS"`). Obtain IDs from `axion_econ_search` or from the FRED data catalog.
+</ParamField>
+
+---
+
+### `axion_econ_calendar`
+
+Returns scheduled economic events and data releases. All filter parameters are optional — pass `NULL` for string parameters or `-1` for `min_importance` to omit that filter.
+
+```c
+AxionResponse* axion_econ_calendar(
+    AxionClient *client,
+    const char *from_date,
+    const char *to_date,
+    const char *country,
+    int min_importance,
+    const char *currency,
+    const char *category
+);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="from_date" type="const char *">
+  Start date for the calendar window in `YYYY-MM-DD` format. Pass `NULL` to use the API default (typically today).
+</ParamField>
+
+<ParamField path="to_date" type="const char *">
+  End date for the calendar window in `YYYY-MM-DD` format. Pass `NULL` to use the API default.
+</ParamField>
+
+<ParamField path="country" type="const char *">
+  ISO country code to filter events by geography (e.g., `"US"`, `"DE"`, `"JP"`). Pass `NULL` to include all countries.
+</ParamField>
+
+<ParamField path="min_importance" type="int">
+  Minimum importance level of events to include. Pass `-1` to skip this filter and return all importance levels.
+
+  | Value | Importance level |
+  |-------|------------------|
+  | `-1`  | No filter (all events) |
+  | `0`   | Low |
+  | `1`   | Medium |
+  | `2`   | High |
+  | `3`   | Very high |
+</ParamField>
+
+<ParamField path="currency" type="const char *">
+  Currency code to filter events by the affected currency (e.g., `"USD"`, `"EUR"`, `"JPY"`). Pass `NULL` to include all currencies.
+</ParamField>
+
+<ParamField path="category" type="const char *">
+  Event category to filter by (e.g., `"employment"`, `"inflation"`, `"gdp"`, `"interest rate"`). Pass `NULL` to include all categories.
+</ParamField>
+
+<Note>
+  All parameters after `client` are optional. Pass `NULL` for any string you want to omit, and `-1` for `min_importance` to disable importance filtering.
+</Note>
+
+---
+
+## Response
+
+All economic functions return a heap-allocated `AxionResponse *`. Free it with `axion_response()` when done.
+
+```c
+typedef struct {
+    int http_status;    // HTTP status code (200 on success)
+    char *data;         // Raw JSON string
+    struct cJSON *json; // Parsed JSON object
+    char *error;        // Error message, or NULL on success
+} AxionResponse;
+```
+
+<Warning>
+  Always check `response->error` before accessing `response->json`. If `error` is non-NULL, the request failed and `json` may be NULL.
+</Warning>
+
+---
+
+## Example
+
+The following example searches for GDP-related series, fetches the US GDP dataset, then retrieves high-importance US economic calendar events for a two-week window.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+
+    /* --- Search for GDP series --- */
+    AxionResponse *search = axion_econ_search(client, "GDP");
+    if (search->error) {
+        fprintf(stderr, "Search error: %s\n", search->error);
+    } else {
+        printf("Search results (HTTP %d):\n%s\n\n",
+               search->http_status, search->data);
+    }
+    axion_response(search);
+
+    /* --- Fetch the US GDP dataset --- */
+    AxionResponse *dataset = axion_econ_dataset(client, "GDP");
+    if (dataset->error) {
+        fprintf(stderr, "Dataset error: %s\n", dataset->error);
+    } else {
+        printf("GDP dataset (HTTP %d):\n%s\n\n",
+               dataset->http_status, dataset->data);
+    }
+    axion_response(dataset);
+
+    /* --- US economic calendar: high-importance events only --- */
+    /*
+     * from_date    = "2025-01-20"
+     * to_date      = "2025-02-03"
+     * country      = "US"
+     * min_importance = 2  (high and above)
+     * currency     = NULL (no currency filter)
+     * category     = NULL (no category filter)
+     */
+    AxionResponse *calendar = axion_econ_calendar(
+        client,
+        "2025-01-20",
+        "2025-02-03",
+        "US",
+        2,
+        NULL,
+        NULL
+    );
+    if (calendar->error) {
+        fprintf(stderr, "Calendar error: %s\n", calendar->error);
+    } else {
+        printf("Calendar (HTTP %d):\n%s\n",
+               calendar->http_status, calendar->data);
+    }
+    axion_response(calendar);
+
+    axion_client(client);
+    return 0;
+}
+```
+
+<Tip>
+  Set `min_importance` to `2` or `3` when scanning the economic calendar ahead of a trading week to focus only on market-moving releases such as CPI, NFP, and FOMC decisions.
+</Tip>

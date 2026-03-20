@@ -1,0 +1,86 @@
+---
+title: "Web traffic"
+description: "Retrieve website visitor counts and traffic trends for publicly-traded companies."
+---
+
+The web traffic endpoint returns website visitor data and traffic trends for publicly-traded companies. This data provides an independent, real-time signal of consumer interest and business activity that often leads official revenue or engagement disclosures.
+
+Common use cases include:
+
+- Tracking month-over-month visitor trends ahead of earnings releases.
+- Comparing traffic share between competitors.
+- Detecting early signals of product launches, outages, or marketing campaigns.
+
+---
+
+## Functions
+
+### `axion_webtraffic_traffic`
+
+Returns historical website traffic metrics for the company associated with the given ticker. The response typically includes monthly or weekly unique visitor counts, page views, and growth rates.
+
+```c
+AxionResponse* axion_webtraffic_traffic(AxionClient *client, const char *ticker);
+```
+
+<ParamField path="client" type="AxionClient *" required>
+  An initialized `AxionClient` instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char *" required>
+  The stock ticker symbol of the company whose web traffic you want to retrieve (e.g., `"AMZN"`, `"SHOP"`, `"NFLX"`). Case-insensitive.
+</ParamField>
+
+<Info>
+  Web traffic data is sourced from third-party measurement providers and reflects estimates rather than exact server-side counts. Data accuracy is generally higher for companies with high web traffic volume.
+</Info>
+
+---
+
+## Response
+
+The function returns a heap-allocated `AxionResponse *`. Free it with `axion_response()` when done.
+
+```c
+typedef struct {
+    int http_status;    // HTTP status code (200 on success)
+    char *data;         // Raw JSON string
+    struct cJSON *json; // Parsed JSON object
+    char *error;        // Error message, or NULL on success
+} AxionResponse;
+```
+
+<Warning>
+  Always check `response->error` before accessing `response->json`. If `error` is non-NULL, the request failed and `json` may be NULL.
+</Warning>
+
+---
+
+## Example
+
+The following example retrieves web traffic data for Amazon (AMZN) and prints the result.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+
+    AxionResponse *traffic = axion_webtraffic_traffic(client, "AMZN");
+
+    if (traffic->error) {
+        fprintf(stderr, "Web traffic error: %s\n", traffic->error);
+    } else {
+        printf("Web traffic (HTTP %d):\n%s\n", traffic->http_status, traffic->data);
+    }
+
+    axion_response(traffic);
+    axion_client(client);
+    return 0;
+}
+```
+
+<Tip>
+  Cross-reference web traffic trends from `axion_webtraffic_traffic` with social sentiment from `axion_sentiment_social` to build a more complete picture of consumer engagement before a company reports quarterly results.
+</Tip>

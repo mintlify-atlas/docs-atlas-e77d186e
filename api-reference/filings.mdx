@@ -1,0 +1,240 @@
+---
+title: "Filings"
+description: "Search and retrieve SEC filings by ticker, form type, year, and quarter. Supports listing recent filings, filtering by form type, and cross-ticker search."
+---
+
+The filings endpoints provide access to SEC regulatory filings. You can retrieve all recent filings for a ticker, drill into a specific form type, search across tickers, or fetch the list of supported form type descriptions.
+
+## Endpoint comparison
+
+| Function | Purpose |
+|---|---|
+| `axion_filings_filings` | All recent filings for a ticker, optionally filtered by form type |
+| `axion_filings_forms` | Filings of a specific form type for a ticker, filtered by year/quarter |
+| `axion_filings_search` | Cross-ticker search by year, quarter, form type, or ticker |
+| `axion_filings_desc_forms` | Global list of all supported SEC form type descriptions — no ticker required |
+
+---
+
+## Functions
+
+### `axion_filings_filings`
+
+Returns recent filings for a ticker. Optionally limit the number of results or filter to a specific form type.
+
+```c
+AxionResponse* axion_filings_filings(
+    AxionClient *client,
+    const char  *ticker,
+    int          limit,
+    const char  *form
+);
+```
+
+**Endpoint:** `GET /filings/<ticker>[?limit=N&form=<form>]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol (e.g., `"AAPL"`).
+</ParamField>
+
+<ParamField path="limit" type="int">
+  Maximum number of filings to return. Pass `0` to use the API default.
+</ParamField>
+
+<ParamField path="form" type="const char*">
+  Filter results to a specific SEC form type (e.g., `"10-K"`, `"10-Q"`, `"8-K"`). Pass `NULL` to return all form types.
+</ParamField>
+
+---
+
+### `axion_filings_forms`
+
+Returns filings of a specific form type for a ticker. Supports filtering by year and quarter for precise retrieval.
+
+```c
+AxionResponse* axion_filings_forms(
+    AxionClient *client,
+    const char  *ticker,
+    const char  *form_type,
+    const char  *year,
+    const char  *quarter,
+    int          limit
+);
+```
+
+**Endpoint:** `GET /filings/<ticker>/forms/<form_type>[?year=<year>&quarter=<quarter>&limit=N]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="ticker" type="const char*" required>
+  The stock ticker symbol.
+</ParamField>
+
+<ParamField path="form_type" type="const char*" required>
+  The SEC form type to retrieve (e.g., `"10-K"`, `"10-Q"`, `"DEF 14A"`).
+</ParamField>
+
+<ParamField path="year" type="const char*">
+  Four-digit year string to filter results (e.g., `"2023"`). Pass `NULL` to return all years.
+</ParamField>
+
+<ParamField path="quarter" type="const char*">
+  Quarter string to filter results (e.g., `"Q1"`, `"Q2"`, `"Q3"`, `"Q4"`). Pass `NULL` to return all quarters. Only meaningful when `year` is also set.
+</ParamField>
+
+<ParamField path="limit" type="int">
+  Maximum number of filings to return. Pass `0` to use the API default.
+</ParamField>
+
+<Note>
+  Use `axion_filings_forms` when you need a specific form type with precise date filtering. Use `axion_filings_filings` when you want a recent cross-form-type feed for a ticker.
+</Note>
+
+---
+
+### `axion_filings_desc_forms`
+
+Returns the global list of all SEC form types supported by the API, including descriptions of what each form type represents. This function does not require a ticker symbol.
+
+```c
+AxionResponse* axion_filings_desc_forms(AxionClient *client);
+```
+
+**Endpoint:** `GET /filings/desc/forms`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<Tip>
+  Call `axion_filings_desc_forms` once at startup to build a lookup table of valid form type strings before calling other filings functions.
+</Tip>
+
+---
+
+### `axion_filings_search`
+
+Cross-ticker search for filings. All parameters are optional — pass `NULL` to omit a filter. Results can be narrowed by year, quarter, form type, and ticker simultaneously.
+
+```c
+AxionResponse* axion_filings_search(
+    AxionClient *client,
+    const char  *year,
+    const char  *quarter,
+    const char  *form,
+    const char  *ticker
+);
+```
+
+**Endpoint:** `GET /filings/search[?year=<year>&quarter=<quarter>&form=<form>&ticker=<ticker>]`
+
+<ParamField path="client" type="AxionClient*" required>
+  An initialized Axion client instance.
+</ParamField>
+
+<ParamField path="year" type="const char*">
+  Four-digit year string (e.g., `"2023"`). Pass `NULL` to omit.
+</ParamField>
+
+<ParamField path="quarter" type="const char*">
+  Quarter string (e.g., `"Q3"`). Pass `NULL` to omit.
+</ParamField>
+
+<ParamField path="form" type="const char*">
+  SEC form type string (e.g., `"10-K"`). Pass `NULL` to omit.
+</ParamField>
+
+<ParamField path="ticker" type="const char*">
+  Ticker symbol to scope the search. Pass `NULL` to search across all tickers.
+</ParamField>
+
+<Warning>
+  Calling `axion_filings_search` with all parameters set to `NULL` returns an unfiltered global filing search. This may return a large payload. Apply at least one filter in production use.
+</Warning>
+
+---
+
+## Response struct
+
+All filings functions return a pointer to an `AxionResponse` struct:
+
+```c
+typedef struct {
+    int   http_status;  /* HTTP status code (e.g., 200, 404) */
+    char *data;         /* Raw JSON string */
+    struct cJSON *json; /* Parsed cJSON object tree */
+    char *error;        /* Error message, or NULL on success */
+} AxionResponse;
+```
+
+---
+
+## Example
+
+The following example fetches the 10 most recent 10-K filings for AAPL using both the general filings endpoint and the form-specific endpoint, then demonstrates a cross-ticker search.
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    AxionClient *client = axion_client_new("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
+
+    /* Fetch up to 10 10-K filings for AAPL via the general endpoint */
+    AxionResponse *filings = axion_filings_filings(client, "AAPL", 10, "10-K");
+    if (filings->error) {
+        fprintf(stderr, "Filings error: %s\n", filings->error);
+    } else {
+        printf("AAPL 10-K filings (limit=10) [%d]:\n%s\n\n",
+               filings->http_status, filings->data);
+    }
+    axion_response_free(filings);
+
+    /* Fetch 10-K filings for AAPL filed in fiscal year 2023 */
+    AxionResponse *forms = axion_filings_forms(
+        client, "AAPL", "10-K", "2023", NULL, 0
+    );
+    if (forms->error) {
+        fprintf(stderr, "Forms error: %s\n", forms->error);
+    } else {
+        printf("AAPL 10-K (2023) [%d]:\n%s\n\n",
+               forms->http_status, forms->data);
+    }
+    axion_response_free(forms);
+
+    /* Cross-ticker search: all 10-K filings from Q4 2023 */
+    AxionResponse *search = axion_filings_search(
+        client, "2023", "Q4", "10-K", NULL
+    );
+    if (search->error) {
+        fprintf(stderr, "Search error: %s\n", search->error);
+    } else {
+        printf("10-K filings Q4 2023 [%d]:\n%s\n\n",
+               search->http_status, search->data);
+    }
+    axion_response_free(search);
+
+    /* List all supported form type descriptions */
+    AxionResponse *desc = axion_filings_desc_forms(client);
+    if (desc->error) {
+        fprintf(stderr, "Desc forms error: %s\n", desc->error);
+    } else {
+        printf("Supported form types [%d]:\n%s\n\n",
+               desc->http_status, desc->data);
+    }
+    axion_response_free(desc);
+
+    axion_client_free(client);
+    return 0;
+}
+```

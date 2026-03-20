@@ -1,0 +1,117 @@
+---
+title: "Client"
+description: "Initialize and manage the Axion client lifecycle."
+---
+
+The `AxionClient` manages a persistent libcurl handle and your API key. Create one client per application and reuse it across all requests. Always free the client when you are done.
+
+## AxionResponse struct
+
+Every API function returns a pointer to an `AxionResponse`. Inspect it after each call and always free it with `axion_free_response`.
+
+<ResponseField name="http_status" type="int">
+  HTTP status code returned by the server. `0` indicates a libcurl transport error before a response was received.
+</ResponseField>
+
+<ResponseField name="data" type="char *">
+  Raw JSON response body as a null-terminated string. `NULL` when a transport error occurred.
+</ResponseField>
+
+<ResponseField name="json" type="struct cJSON *">
+  Parsed JSON object. `NULL` when a transport error occurred or when `http_status` is 4xx or 5xx. Free this with `axion_free_response`—do not call `cJSON_Delete` directly.
+</ResponseField>
+
+<ResponseField name="error" type="char *">
+  Human-readable error message. `NULL` on success.
+</ResponseField>
+
+---
+
+## axion_init
+
+Initializes the Axion client. Calls `curl_global_init`, allocates a `CURL` handle, and copies the API key.
+
+```c
+AxionClient *axion_init(const char *api_key);
+```
+
+**Returns** a heap-allocated `AxionClient *`, or `NULL` if `curl_easy_init` or `malloc` fails.
+
+<ParamField path="api_key" type="const char *" required>
+  Your Axion API key. The client stores a copy; you may free the original after calling `axion_init`.
+</ParamField>
+
+<Warning>
+  Check the return value. If `axion_init` returns `NULL`, libcurl could not be initialized or the system is out of memory. Do not call any other Axion functions with a `NULL` client.
+</Warning>
+
+---
+
+## axion_client / axion_free_client
+
+Frees all resources held by the client: the API key string, the `CURL` handle, and the global libcurl state.
+
+```c
+void axion_client(AxionClient *client);
+void axion_free_client(AxionClient *client); // alias
+```
+
+`axion_free_client` is an alias for `axion_client`. Both functions are identical.
+
+<ParamField path="client" type="AxionClient *" required>
+  Client previously returned by `axion_init`. Passing `NULL` is safe and has no effect.
+</ParamField>
+
+<Note>
+  Do not use `client` after calling this function. The pointer is invalid.
+</Note>
+
+---
+
+## axion_response / axion_free_response
+
+Frees all resources held by a response: the raw data string, the parsed JSON object (`cJSON_Delete`), the error string, and the struct itself.
+
+```c
+void axion_response(AxionResponse *response);
+void axion_free_response(AxionResponse *response); // alias
+```
+
+`axion_free_response` is an alias for `axion_response`. Both functions are identical.
+
+<ParamField path="response" type="AxionResponse *" required>
+  Response previously returned by any Axion API function. Passing `NULL` is safe and has no effect.
+</ParamField>
+
+<Warning>
+  Every `AxionResponse *` returned by the library must be freed exactly once. Forgetting to free responses will leak memory.
+</Warning>
+
+---
+
+## Example
+
+```c
+#include "axion.h"
+#include <stdio.h>
+
+int main(void) {
+    /* Initialize the client */
+    AxionClient *client = axion_init("YOUR_API_KEY");
+    if (!client) {
+        fprintf(stderr, "Failed to initialize Axion client\n");
+        return 1;
+    }
+
+    /*
+     * Make API calls here.
+     * All API functions return an AxionResponse *.
+     * Check http_status and json before using the data.
+     * Always free the response when done.
+     */
+
+    /* Tear down the client */
+    axion_free_client(client);
+    return 0;
+}
+```
