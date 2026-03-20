@@ -1,0 +1,156 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Axion C SDK",
+  "projectDescription": "A C client library for the Axion financial data API, providing access to market data, company profiles, financials, news, sentiment, filings, and more.",
+  "theme": "linden",
+  "primaryColor": "#7c7c7c",
+  "lightColor": "#090909",
+  "darkColor": "#c6c6c6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/client",
+              "concepts/responses",
+              "concepts/error-handling",
+              "concepts/memory-management"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/market-data",
+              "guides/company-profiles",
+              "guides/financials",
+              "guides/news-sentiment"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Client",
+            "pages": [
+              "api-reference/client"
+            ]
+          },
+          {
+            "group": "Market Data",
+            "pages": [
+              "api-reference/stocks",
+              "api-reference/crypto",
+              "api-reference/forex",
+              "api-reference/futures",
+              "api-reference/indices"
+            ]
+          },
+          {
+            "group": "Company",
+            "pages": [
+              "api-reference/profiles",
+              "api-reference/financials",
+              "api-reference/earnings",
+              "api-reference/filings",
+              "api-reference/insiders"
+            ]
+          },
+          {
+            "group": "Market Intelligence",
+            "pages": [
+              "api-reference/news",
+              "api-reference/sentiment",
+              "api-reference/esg-credit",
+              "api-reference/supply-chain"
+            ]
+          },
+          {
+            "group": "Other",
+            "pages": [
+              "api-reference/economic",
+              "api-reference/etfs",
+              "api-reference/webtraffic"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Market data for stocks, crypto, forex, futures, and indices",
+    "Company profiles, financials, and earnings data",
+    "SEC filings search and retrieval",
+    "Insider ownership and transaction tracking",
+    "FRED economic datasets and economic calendar",
+    "Financial news and social/analyst sentiment analysis",
+    "ESG scores and credit ratings",
+    "Supply chain customer, supplier, and peer relationships",
+    "ETF fund info, holdings, and exposure",
+    "Web traffic data for companies"
+  ],
+  "publicApiSurface": [
+    "axion_init(api_key)",
+    "axion_free_client(client)",
+    "axion_free_response(response)",
+    "axion_get_stock_ticker_by_symbol(client, ticker)",
+    "axion_get_stock_prices(client, ticker, from_date, to_date, frame)",
+    "axion_stocks_tickers(client, country, exchange)",
+    "axion_stocks_prices(client, ticker, from_date, to_date, frame)",
+    "axion_crypto_tickers(client, type)",
+    "axion_crypto_prices(client, ticker, from_date, to_date, frame)",
+    "axion_forex_tickers(client, country, exchange)",
+    "axion_forex_prices(client, ticker, from_date, to_date, frame)",
+    "axion_futures_tickers(client, exchange)",
+    "axion_futures_prices(client, ticker, from_date, to_date, frame)",
+    "axion_indices_tickers(client, exchange)",
+    "axion_indices_prices(client, ticker, from_date, to_date, frame)",
+    "axion_profiles_profile(client, ticker)",
+    "axion_profiles_info(client, ticker)",
+    "axion_profiles_summary(client, ticker)",
+    "axion_profiles_statistics(client, ticker)",
+    "axion_profiles_calendar(client, ticker)",
+    "axion_profiles_recommendation(client, ticker)",
+    "axion_financials_revenue(client, ticker, periods)",
+    "axion_financials_net_income(client, ticker, periods)",
+    "axion_financials_metrics(client, ticker)",
+    "axion_financials_snapshot(client, ticker)",
+    "axion_earnings_history(client, ticker)",
+    "axion_earnings_report(client, ticker, year, quarter)",
+    "axion_filings_filings(client, ticker, limit, form)",
+    "axion_filings_search(client, year, quarter, form, ticker)",
+    "axion_insiders_funds(client, ticker)",
+    "axion_insiders_ownership(client, ticker)",
+    "axion_insiders_transactions(client, ticker)",
+    "axion_econ_search(client, query)",
+    "axion_econ_dataset(client, series_id)",
+    "axion_econ_calendar(client, from_date, to_date, country, min_importance, currency, category)",
+    "axion_news_general(client)",
+    "axion_news_company(client, ticker)",
+    "axion_sentiment_all(client, ticker)",
+    "axion_sentiment_social(client, ticker)",
+    "axion_sentiment_analyst(client, ticker)",
+    "axion_esg_data(client, ticker)",
+    "axion_credit_search(client, query)",
+    "axion_credit_ratings(client, entity_id)",
+    "axion_supply_chain_customers(client, ticker)",
+    "axion_supply_chain_suppliers(client, ticker)",
+    "axion_supply_chain_peers(client, ticker)",
+    "axion_etfs_fund(client, ticker)",
+    "axion_etfs_holdings(client, ticker)",
+    "axion_etfs_exposure(client, ticker)",
+    "axion_webtraffic_traffic(client, ticker)"
+  ]
+}
